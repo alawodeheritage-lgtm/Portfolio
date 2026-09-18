@@ -1,29 +1,33 @@
 import React, { useState } from 'react';
 import { Icon } from '../ui/Icon';
 import { Button } from '../ui/Button';
+import { loginAdmin, AuthenticatedAdmin } from '../../lib/auth';
 
 interface AdminLoginProps {
   onNavigate: (path: string) => void;
-  onLoginSuccess?: () => void;
+  onLoginSuccess?: (admin: AuthenticatedAdmin) => void;
 }
 
 export const AdminLogin: React.FC<AdminLoginProps> = ({ onNavigate, onLoginSuccess }) => {
-  const [email, setEmail] = useState('alawodeheritage@gmail.com');
-  const [password, setPassword] = useState('••••••••••••');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError('');
 
-    // Mock login authentication UI transition
-    setTimeout(() => {
-      setIsLoading(false);
-      if (onLoginSuccess) {
-        onLoginSuccess();
-      }
+    try {
+      const admin = await loginAdmin(email.trim(), password);
+      onLoginSuccess?.(admin);
       onNavigate('/admin/dashboard');
-    }, 600);
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : 'Unable to sign in.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -43,6 +47,12 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onNavigate, onLoginSucce
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-6 sm:px-10 rounded-2xl border border-stone-200 shadow-xs space-y-6">
           <form onSubmit={handleLogin} className="space-y-4">
+            {error && (
+              <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-sm text-rose-800" role="alert">
+                {error}
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <label htmlFor="admin-email" className="block text-xs font-mono font-medium text-stone-700 uppercase">
                 Administrator Email
@@ -74,10 +84,10 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onNavigate, onLoginSucce
             <div className="p-3 bg-stone-50 rounded-lg border border-stone-200 text-xs font-mono text-stone-600 space-y-1">
               <div className="text-stone-900 font-semibold flex items-center gap-1.5">
                 <Icon name="lock" size="sm" className="text-stone-500" />
-                <span>UI Preview Mode</span>
+                <span>Private Admin Access</span>
               </div>
               <p className="font-sans text-stone-600 text-[11px] leading-relaxed">
-                Click &quot;Access Console&quot; to preview the complete administrative workspace without credentials.
+                Sign in with the private administrator credentials configured on the backend.
               </p>
             </div>
 
@@ -108,7 +118,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onNavigate, onLoginSucce
               <Icon name="arrow_back" size="sm" />
               <span>Return to Public Website</span>
             </button>
-            <span className="text-stone-400">Auth Stage 1</span>
+            <span className="text-stone-400">Secure Session</span>
           </div>
         </div>
       </div>

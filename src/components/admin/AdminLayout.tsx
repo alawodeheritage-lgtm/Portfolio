@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Icon } from '../ui/Icon';
 import { ADMIN_NAV_ITEMS } from '../../data/adminMockData';
+import { logoutAdmin } from '../../lib/auth';
 
 interface AdminLayoutProps {
   currentPath: string;
@@ -9,6 +10,7 @@ interface AdminLayoutProps {
   pageTitle: string;
   pageDescription?: string;
   pageAction?: React.ReactNode;
+  onLogout?: () => void;
 }
 
 export const AdminLayout: React.FC<AdminLayoutProps> = ({
@@ -18,17 +20,29 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   pageTitle,
   pageDescription,
   pageAction,
+  onLogout,
 }) => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
 
   const handleNav = (href: string) => {
     setMobileSidebarOpen(false);
     onNavigate(href);
   };
 
-  const handleLogout = () => {
-    // Navigates to admin login screen
-    onNavigate('/admin/login');
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    setLogoutError('');
+    try {
+      await logoutAdmin();
+      onLogout?.();
+      onNavigate('/admin/login');
+    } catch {
+      setLogoutError('Unable to sign out. Please try again.');
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -86,12 +100,18 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           <button
             type="button"
             onClick={handleLogout}
+            disabled={isLoggingOut}
             className="flex items-center gap-1 px-2.5 py-1 rounded text-stone-400 hover:text-rose-400 hover:bg-stone-800/80 transition-colors"
             title="Log out of admin session"
           >
             <Icon name="logout" size="sm" />
             <span className="hidden sm:inline">Logout</span>
           </button>
+          {logoutError && (
+            <span className="text-rose-300 text-[11px]" role="alert">
+              {logoutError}
+            </span>
+          )}
         </div>
       </header>
 
@@ -108,9 +128,8 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
 
         {/* Sidebar Navigation */}
         <aside
-          className={`fixed md:static inset-y-14 left-0 z-40 w-64 bg-stone-900 text-stone-300 flex flex-col justify-between border-r border-stone-800 transition-transform duration-200 ease-in-out md:translate-x-0 ${
-            mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
+          className={`fixed md:static inset-y-14 left-0 z-40 w-64 bg-stone-900 text-stone-300 flex flex-col justify-between border-r border-stone-800 transition-transform duration-200 ease-in-out md:translate-x-0 ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
           aria-label="Admin Sidebar"
         >
           <div className="p-4 space-y-6 overflow-y-auto">
@@ -135,11 +154,10 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
                     key={item.id}
                     type="button"
                     onClick={() => handleNav(item.href)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors select-none ${
-                      isActive
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors select-none ${isActive
                         ? 'bg-stone-800 text-white font-semibold shadow-xs'
                         : 'text-stone-400 hover:text-stone-200 hover:bg-stone-800/40'
-                    }`}
+                      }`}
                     aria-current={isActive ? 'page' : undefined}
                   >
                     <div className="flex items-center gap-2.5">
@@ -153,11 +171,10 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
 
                     {item.badge && (
                       <span
-                        className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${
-                          isActive
+                        className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${isActive
                             ? 'bg-stone-700 text-stone-200'
                             : 'bg-stone-800 text-stone-400'
-                        }`}
+                          }`}
                       >
                         {item.badge}
                       </span>

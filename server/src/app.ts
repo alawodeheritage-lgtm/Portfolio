@@ -4,6 +4,7 @@ import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { env } from './config/env.js';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js';
+import { authRouter } from './routes/auth.routes.js';
 
 export function createApp() {
   const app = express();
@@ -31,6 +32,8 @@ export function createApp() {
   app.get('/api/health', (_request, response) => {
     response.status(200).json({ status: 'ok' });
   });
+
+  app.use('/api/auth', authRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

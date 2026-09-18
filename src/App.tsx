@@ -17,13 +17,46 @@ import { AdminMessages } from './components/admin/AdminMessages';
 import { AdminAnalytics } from './components/admin/AdminAnalytics';
 import { BRAND_TAGLINE, CORE_MESSAGE } from './types/navigation';
 import { SELECTED_PROJECTS } from './data/projects';
+import { AuthenticatedAdmin, getCurrentAdmin } from './lib/auth';
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState('/');
+  const [admin, setAdmin] = useState<AuthenticatedAdmin | null>(null);
+  const [authState, setAuthState] = useState<'idle' | 'checking' | 'authenticated' | 'unauthenticated'>('idle');
+
+  const isAdminRoute = currentPath === '/admin' || currentPath.startsWith('/admin/');
+  const isProtectedAdminRoute = isAdminRoute && currentPath !== '/admin/login';
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentPath]);
+
+  useEffect(() => {
+    if (!isProtectedAdminRoute) {
+      return;
+    }
+
+    let isActive = true;
+    setAuthState('checking');
+
+    getCurrentAdmin()
+      .then((currentAdmin) => {
+        if (!isActive) return;
+        setAdmin(currentAdmin);
+        setAuthState(currentAdmin ? 'authenticated' : 'unauthenticated');
+        if (!currentAdmin) setCurrentPath('/admin/login');
+      })
+      .catch(() => {
+        if (!isActive) return;
+        setAdmin(null);
+        setAuthState('unauthenticated');
+        setCurrentPath('/admin/login');
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [isProtectedAdminRoute]);
 
   // If visiting a specific project case-study placeholder route
   if (currentPath.startsWith('/projects/') && currentPath !== '/projects') {
@@ -164,7 +197,23 @@ export default function App() {
 
   // Admin Login (/admin/login)
   if (currentPath === '/admin/login') {
-    return <AdminLogin onNavigate={setCurrentPath} />;
+    return (
+      <AdminLogin
+        onNavigate={setCurrentPath}
+        onLoginSuccess={(authenticatedAdmin) => {
+          setAdmin(authenticatedAdmin);
+          setAuthState('authenticated');
+        }}
+      />
+    );
+  }
+
+  if (isProtectedAdminRoute && authState !== 'authenticated') {
+    return (
+      <div className="min-h-screen bg-stone-100 flex items-center justify-center text-sm text-stone-600">
+        {authState === 'checking' ? 'Checking admin session...' : 'Redirecting to admin login...'}
+      </div>
+    );
   }
 
   // Admin Dashboard (/admin/dashboard or /admin)
@@ -175,6 +224,7 @@ export default function App() {
         onNavigate={setCurrentPath}
         pageTitle="System Overview"
         pageDescription="Central operational console for monitoring project publications, contact inquiries, and peer endorsements."
+        onLogout={() => setAdmin(null)}
       >
         <AdminDashboard onNavigate={setCurrentPath} />
       </AdminLayout>
@@ -189,6 +239,7 @@ export default function App() {
         onNavigate={setCurrentPath}
         pageTitle="Projects Directory"
         pageDescription="Manage portfolio software systems, repository links, publish status, and featured assignments."
+        onLogout={() => setAdmin(null)}
       >
         <AdminProjects onNavigate={setCurrentPath} />
       </AdminLayout>
@@ -203,6 +254,7 @@ export default function App() {
         onNavigate={setCurrentPath}
         pageTitle="Reviews & Endorsements"
         pageDescription="Review, moderate, and approve endorsements from academic peers, BCOS ICT mentors, and clients."
+        onLogout={() => setAdmin(null)}
       >
         <AdminReviews />
       </AdminLayout>
@@ -217,6 +269,7 @@ export default function App() {
         onNavigate={setCurrentPath}
         pageTitle="Inbound Messages"
         pageDescription="Review inquiries and feedback submitted through the public contact channel."
+        onLogout={() => setAdmin(null)}
       >
         <AdminMessages />
       </AdminLayout>
@@ -231,6 +284,7 @@ export default function App() {
         onNavigate={setCurrentPath}
         pageTitle="Traffic & Inquiries"
         pageDescription="Engagement metrics, case-study readership patterns, and referral sources."
+        onLogout={() => setAdmin(null)}
       >
         <AdminAnalytics />
       </AdminLayout>
