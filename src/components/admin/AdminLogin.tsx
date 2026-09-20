@@ -37,7 +37,8 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onNavigate, onLoginSucce
           P
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold font-display tracking-tight text-stone-950">
-          Portfolio Console
+          {/* Portfolio Console */}
+          HERITAGE TECH LABS
         </h1>
         <p className="text-xs font-mono text-stone-500 uppercase tracking-wider">
           Single-tenant private administrator access
