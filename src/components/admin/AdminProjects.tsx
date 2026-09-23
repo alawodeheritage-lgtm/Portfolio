@@ -1,15 +1,26 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Icon } from '../ui/Icon';
 import { Button } from '../ui/Button';
-import { INITIAL_ADMIN_PROJECTS } from '../../data/adminMockData';
 import { AdminProjectItem, ProjectPublishStatus } from '../../types/admin';
+import {
+  AdminProjectApiProject,
+  createAdminProject,
+  deleteAdminProject,
+  fetchAdminProjects,
+  setAdminProjectFeatured,
+  setAdminProjectPublished,
+  updateAdminProject,
+} from '../../lib/projects';
 
 interface AdminProjectsProps {
   onNavigate: (path: string) => void;
 }
 
 export const AdminProjects: React.FC<AdminProjectsProps> = ({ onNavigate }) => {
-  const [projects, setProjects] = useState<AdminProjectItem[]>(INITIAL_ADMIN_PROJECTS);
+  const [projects, setProjects] = useState<AdminProjectItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'published' | 'draft' | 'featured'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -31,12 +42,56 @@ export const AdminProjects: React.FC<AdminProjectsProps> = ({ onNavigate }) => {
   // New Project Form State
   const [formTitle, setFormTitle] = useState('');
   const [formSlug, setFormSlug] = useState('');
+  const [formDescription, setFormDescription] = useState('');
   const [formCategory, setFormCategory] = useState('Full-Stack Management System');
   const [formTech, setFormTech] = useState('');
   const [formStatus, setFormStatus] = useState<ProjectPublishStatus>('published');
   const [formFeatured, setFormFeatured] = useState(false);
   const [formGithub, setFormGithub] = useState('');
   const [formLive, setFormLive] = useState('');
+
+  const toAdminProjectItem = (project: AdminProjectApiProject): AdminProjectItem => ({
+    id: project.id,
+    title: project.title,
+    slug: project.slug,
+    description: project.description,
+    category: project.category || 'Software Project',
+    status: project.isPublished ? 'published' : 'draft',
+    isFeatured: project.isFeatured,
+    lastModified: new Date(project.updatedAt).toLocaleDateString(),
+    techStack: project.technologies,
+    githubUrl: project.githubUrl,
+    liveUrl: project.liveUrl,
+  });
+
+  const replaceProject = (project: AdminProjectApiProject) => {
+    setProjects((current) => {
+      const next = toAdminProjectItem(project);
+      const exists = current.some((item) => item.id === next.id);
+      return exists ? current.map((item) => (item.id === next.id ? next : item)) : [next, ...current];
+    });
+  };
+
+  useEffect(() => {
+    let active = true;
+    setIsLoading(true);
+    setLoadError(null);
+
+    fetchAdminProjects()
+      .then((items) => {
+        if (active) setProjects(items.map(toAdminProjectItem));
+      })
+      .catch((error: unknown) => {
+        if (active) setLoadError(error instanceof Error ? error.message : 'Unable to load projects.');
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Filtered project list
   const filteredProjects = projects.filter((p) => {
@@ -57,38 +112,48 @@ export const AdminProjects: React.FC<AdminProjectsProps> = ({ onNavigate }) => {
   });
 
   // Action: Toggle Featured
-  const handleToggleFeatured = (project: AdminProjectItem) => {
+  const handleToggleFeatured = async (project: AdminProjectItem) => {
     const nextState = !project.isFeatured;
-    setProjects((prev) =>
-      prev.map((p) => (p.id === project.id ? { ...p, isFeatured: nextState } : p))
-    );
-    showNotification(
-      nextState
-        ? `"${project.title}" marked as featured.`
-        : `"${project.title}" removed from featured.`
-    );
+    try {
+      setIsSaving(true);
+      replaceProject(await setAdminProjectFeatured(project.id, nextState));
+      showNotification(nextState ? `"${project.title}" marked as featured.` : `"${project.title}" removed from featured.`);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Unable to update featured state.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Action: Publish / Unpublish Toggle
-  const handleTogglePublish = (project: AdminProjectItem) => {
+  const handleTogglePublish = async (project: AdminProjectItem) => {
     const nextStatus: ProjectPublishStatus = project.status === 'published' ? 'draft' : 'published';
-    setProjects((prev) =>
-      prev.map((p) => (p.id === project.id ? { ...p, status: nextStatus, lastModified: 'Just now' } : p))
-    );
-    showNotification(
-      nextStatus === 'published'
-        ? `"${project.title}" is now Published.`
-        : `"${project.title}" unpublished (set to Draft).`
-    );
+    try {
+      setIsSaving(true);
+      replaceProject(await setAdminProjectPublished(project.id, nextStatus === 'published'));
+      showNotification(nextStatus === 'published' ? `"${project.title}" is now Published.` : `"${project.title}" unpublished (set to Draft).`);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Unable to update publish state.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Action: Delete
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deletingProject) return;
     const title = deletingProject.title;
-    setProjects((prev) => prev.filter((p) => p.id !== deletingProject.id));
-    setDeletingProject(null);
-    showNotification(`"${title}" deleted.`);
+    try {
+      setIsSaving(true);
+      await deleteAdminProject(deletingProject.id);
+      setProjects((prev) => prev.filter((p) => p.id !== deletingProject.id));
+      setDeletingProject(null);
+      showNotification(`"${title}" deleted.`);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Unable to delete project.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Action: Open Edit Modal
@@ -96,6 +161,7 @@ export const AdminProjects: React.FC<AdminProjectsProps> = ({ onNavigate }) => {
     setEditingProject(project);
     setFormTitle(project.title);
     setFormSlug(project.slug);
+    setFormDescription(project.description || '');
     setFormCategory(project.category);
     setFormTech(project.techStack.join(', '));
     setFormStatus(project.status);
@@ -108,6 +174,7 @@ export const AdminProjects: React.FC<AdminProjectsProps> = ({ onNavigate }) => {
   const handleOpenAdd = () => {
     setFormTitle('');
     setFormSlug('');
+    setFormDescription('');
     setFormCategory('Full-Stack Management System');
     setFormTech('');
     setFormStatus('published');
@@ -118,9 +185,9 @@ export const AdminProjects: React.FC<AdminProjectsProps> = ({ onNavigate }) => {
   };
 
   // Action: Submit Create
-  const handleCreateProject = (e: React.FormEvent) => {
+  const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formTitle.trim()) return;
+    if (!formTitle.trim() || !formDescription.trim()) return;
 
     const slug = (
       formSlug.trim() ||
@@ -131,54 +198,57 @@ export const AdminProjects: React.FC<AdminProjectsProps> = ({ onNavigate }) => {
         .replace(/^-|-$/g, '')
     );
 
-    const newProject: AdminProjectItem = {
-      id: `proj-${Date.now()}`,
-      title: formTitle.trim(),
-      slug,
-      category: formCategory.trim() || 'Software Project',
-      status: formStatus,
-      isFeatured: formFeatured,
-      lastModified: 'Just now',
-      techStack: formTech
-        ? formTech.split(',').map((t) => t.trim()).filter(Boolean)
-        : ['TypeScript', 'React'],
-      githubUrl: formGithub.trim() || undefined,
-      liveUrl: formLive.trim() || undefined,
-    };
-
-    setProjects([newProject, ...projects]);
-    setShowAddModal(false);
-    showNotification(`Project "${newProject.title}" created successfully.`);
+    try {
+      setIsSaving(true);
+      const project = await createAdminProject({
+        title: formTitle.trim(),
+        slug,
+        category: formCategory.trim() || 'Software Project',
+        description: formDescription.trim(),
+        technologies: formTech ? formTech.split(',').map((t) => t.trim()).filter(Boolean) : [],
+        highlights: [],
+        media: [],
+        githubUrl: formGithub.trim(),
+        liveUrl: formLive.trim(),
+        isPublished: formStatus === 'published',
+        isFeatured: formFeatured,
+      });
+      replaceProject(project);
+      setShowAddModal(false);
+      showNotification(`Project "${project.title}" created successfully.`);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Unable to create project.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Action: Submit Edit
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingProject || !formTitle.trim()) return;
+    if (!editingProject || !formTitle.trim() || !formDescription.trim()) return;
 
-    const updatedProjects = projects.map((p) => {
-      if (p.id === editingProject.id) {
-        return {
-          ...p,
-          title: formTitle.trim(),
-          slug: formSlug.trim() || p.slug,
-          category: formCategory.trim() || p.category,
-          status: formStatus,
-          isFeatured: formFeatured,
-          lastModified: 'Just now',
-          techStack: formTech
-            ? formTech.split(',').map((t) => t.trim()).filter(Boolean)
-            : p.techStack,
-          githubUrl: formGithub.trim() || undefined,
-          liveUrl: formLive.trim() || undefined,
-        };
-      }
-      return p;
-    });
-
-    setProjects(updatedProjects);
-    showNotification(`Project "${formTitle.trim()}" updated successfully.`);
-    setEditingProject(null);
+    try {
+      setIsSaving(true);
+      const project = await updateAdminProject(editingProject.id, {
+        title: formTitle.trim(),
+        slug: formSlug.trim() || editingProject.slug,
+        category: formCategory.trim() || editingProject.category,
+        description: formDescription.trim(),
+        technologies: formTech ? formTech.split(',').map((t) => t.trim()).filter(Boolean) : [],
+        isPublished: formStatus === 'published',
+        isFeatured: formFeatured,
+        githubUrl: formGithub.trim(),
+        liveUrl: formLive.trim(),
+      });
+      replaceProject(project);
+      showNotification(`Project "${project.title}" updated successfully.`);
+      setEditingProject(null);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Unable to update project.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const counts = {
@@ -201,6 +271,18 @@ export const AdminProjects: React.FC<AdminProjectsProps> = ({ onNavigate }) => {
         </div>
       )}
 
+      {loadError && (
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-sm text-rose-800" role="alert">
+          {loadError}
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="p-8 text-center bg-white rounded-xl border border-stone-200 text-stone-500 font-mono text-xs">
+          Loading projects from the server...
+        </div>
+      )}
+
       {/* Practical Action Toolbar */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-stone-200 shadow-2xs">
         {/* Left: Filter Buttons */}
@@ -209,11 +291,10 @@ export const AdminProjects: React.FC<AdminProjectsProps> = ({ onNavigate }) => {
             id="filter-all-projects-btn"
             type="button"
             onClick={() => setFilter('all')}
-            className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap ${
-              filter === 'all'
+            className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap ${filter === 'all'
                 ? 'bg-stone-900 text-white'
                 : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-            }`}
+              }`}
           >
             All Projects ({counts.all})
           </button>
@@ -221,11 +302,10 @@ export const AdminProjects: React.FC<AdminProjectsProps> = ({ onNavigate }) => {
             id="filter-published-projects-btn"
             type="button"
             onClick={() => setFilter('published')}
-            className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap ${
-              filter === 'published'
+            className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap ${filter === 'published'
                 ? 'bg-stone-900 text-white'
                 : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-            }`}
+              }`}
           >
             Published ({counts.published})
           </button>
@@ -233,11 +313,10 @@ export const AdminProjects: React.FC<AdminProjectsProps> = ({ onNavigate }) => {
             id="filter-draft-projects-btn"
             type="button"
             onClick={() => setFilter('draft')}
-            className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap ${
-              filter === 'draft'
+            className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap ${filter === 'draft'
                 ? 'bg-stone-900 text-white'
                 : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-            }`}
+              }`}
           >
             Drafts ({counts.draft})
           </button>
@@ -245,11 +324,10 @@ export const AdminProjects: React.FC<AdminProjectsProps> = ({ onNavigate }) => {
             id="filter-featured-projects-btn"
             type="button"
             onClick={() => setFilter('featured')}
-            className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1 ${
-              filter === 'featured'
+            className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1 ${filter === 'featured'
                 ? 'bg-stone-900 text-white'
                 : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-            }`}
+              }`}
           >
             <Icon name="star" size="sm" className="text-[13px] text-amber-500" />
             <span>Featured ({counts.featured})</span>
@@ -297,7 +375,7 @@ export const AdminProjects: React.FC<AdminProjectsProps> = ({ onNavigate }) => {
       </div>
 
       {/* Desktop Projects Table (Visible on md and above) */}
-      <div className="hidden md:block bg-white rounded-xl border border-stone-200 shadow-2xs overflow-hidden">
+      <div className={`hidden md:block bg-white rounded-xl border border-stone-200 shadow-2xs overflow-hidden ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
         <table className="w-full text-left border-collapse text-xs">
           <thead>
             <tr className="border-b border-stone-200 bg-stone-50 font-mono text-stone-500 uppercase tracking-wider text-[11px]">
@@ -400,11 +478,10 @@ export const AdminProjects: React.FC<AdminProjectsProps> = ({ onNavigate }) => {
                       <button
                         type="button"
                         onClick={() => handleToggleFeatured(p)}
-                        className={`inline-flex items-center gap-1 px-2 py-1 rounded font-mono text-xs transition-colors ${
-                          p.isFeatured
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded font-mono text-xs transition-colors ${p.isFeatured
                             ? 'bg-amber-100 text-amber-900 border border-amber-300 font-medium hover:bg-amber-200'
                             : 'bg-stone-100 text-stone-500 hover:bg-stone-200 border border-stone-200'
-                        }`}
+                          }`}
                         title={p.isFeatured ? 'Click to unmark as featured' : 'Click to mark as featured'}
                       >
                         <Icon
@@ -428,11 +505,10 @@ export const AdminProjects: React.FC<AdminProjectsProps> = ({ onNavigate }) => {
                         <button
                           type="button"
                           onClick={() => handleTogglePublish(p)}
-                          className={`px-2 py-1 rounded border text-[11px] transition-colors ${
-                            p.status === 'published'
+                          className={`px-2 py-1 rounded border text-[11px] transition-colors ${p.status === 'published'
                               ? 'border-stone-200 text-stone-600 hover:bg-stone-100 hover:text-stone-900'
                               : 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
-                          }`}
+                            }`}
                           title={p.status === 'published' ? 'Unpublish (move to Draft)' : 'Publish project'}
                         >
                           {p.status === 'published' ? 'Unpublish' : 'Publish'}
@@ -478,7 +554,7 @@ export const AdminProjects: React.FC<AdminProjectsProps> = ({ onNavigate }) => {
       </div>
 
       {/* Mobile Projects Presentation (Cards layout for small screens) */}
-      <div className="md:hidden space-y-3">
+      <div className={`md:hidden space-y-3 ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
         {filteredProjects.length === 0 ? (
           <div className="p-8 text-center bg-white rounded-xl border border-stone-200 text-stone-500 font-mono text-xs space-y-2">
             <Icon name="folder_off" size="md" className="mx-auto text-stone-300" />
@@ -567,11 +643,10 @@ export const AdminProjects: React.FC<AdminProjectsProps> = ({ onNavigate }) => {
                 <button
                   type="button"
                   onClick={() => handleToggleFeatured(p)}
-                  className={`px-2 py-1.5 rounded border text-center ${
-                    p.isFeatured
+                  className={`px-2 py-1.5 rounded border text-center ${p.isFeatured
                       ? 'border-amber-300 bg-amber-50 text-amber-900'
                       : 'border-stone-200 text-stone-700 hover:bg-stone-50'
-                  }`}
+                    }`}
                 >
                   {p.isFeatured ? '★ Featured' : '☆ Feature'}
                 </button>
@@ -666,6 +741,18 @@ export const AdminProjects: React.FC<AdminProjectsProps> = ({ onNavigate }) => {
                     <option value="draft">Draft</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-stone-800">Description *</label>
+                <textarea
+                  required
+                  rows={3}
+                  value={formDescription}
+                  onChange={(e) => setFormDescription(e.target.value)}
+                  placeholder="Describe the project and its purpose"
+                  className="w-full px-3 py-2 rounded-lg border border-stone-300 text-xs focus:ring-2 focus:ring-stone-900 focus:outline-none"
+                />
               </div>
 
               <div className="space-y-1">
@@ -808,6 +895,18 @@ export const AdminProjects: React.FC<AdminProjectsProps> = ({ onNavigate }) => {
               </div>
 
               <div className="space-y-1">
+                <label className="font-semibold text-stone-800">Description *</label>
+                <textarea
+                  required
+                  rows={3}
+                  value={formDescription}
+                  onChange={(e) => setFormDescription(e.target.value)}
+                  placeholder="Describe the project and its purpose"
+                  className="w-full px-3 py-2 rounded-lg border border-stone-300 text-xs focus:ring-2 focus:ring-stone-900 focus:outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
                 <label className="font-semibold text-stone-800">Category</label>
                 <input
                   type="text"
@@ -876,7 +975,7 @@ export const AdminProjects: React.FC<AdminProjectsProps> = ({ onNavigate }) => {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" variant="primary" size="sm">
+                <Button type="submit" variant="primary" size="sm" disabled={isSaving}>
                   Save Changes
                 </Button>
               </div>

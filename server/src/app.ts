@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import { env } from './config/env.js';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js';
 import { authRouter } from './routes/auth.routes.js';
+import { adminProjectRouter } from './routes/admin-project.routes.js';
 import { projectRouter } from './routes/project.routes.js';
 
 export function createApp() {
@@ -36,6 +37,7 @@ export function createApp() {
 
   app.use('/api/auth', authRouter);
   app.use('/api/projects', projectRouter);
+  app.use('/api/admin/projects', adminProjectRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

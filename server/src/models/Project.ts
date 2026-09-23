@@ -1,11 +1,5 @@
 import { Document, Model, Schema, model } from 'mongoose';
 
-export interface ProjectMedia {
-  url: string;
-  type?: string;
-  alt?: string;
-}
-
 export interface Project {
   slug: string;
   title: string;
@@ -17,7 +11,7 @@ export interface Project {
   githubUrl?: string;
   liveUrl?: string;
   caseStudyUrl?: string;
-  media: ProjectMedia[];
+  media: string[];
   caseStudyContent?: string;
   isPublished: boolean;
   isFeatured: boolean;
@@ -26,15 +20,6 @@ export interface Project {
 }
 
 export type ProjectDocument = Project & Document;
-
-const projectMediaSchema = new Schema<ProjectMedia>(
-  {
-    url: { type: String, required: true, trim: true },
-    type: { type: String, trim: true },
-    alt: { type: String, trim: true },
-  },
-  { _id: false },
-);
 
 const projectSchema = new Schema<ProjectDocument>(
   {
@@ -63,7 +48,8 @@ const projectSchema = new Schema<ProjectDocument>(
     liveUrl: { type: String, trim: true },
     caseStudyUrl: { type: String, trim: true },
     media: {
-      type: [projectMediaSchema],
+      type: [String],
+      required: true,
       default: [],
     },
     caseStudyContent: { type: String, trim: true },

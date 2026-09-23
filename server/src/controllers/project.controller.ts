@@ -33,7 +33,7 @@ function toPublicProject(project: ProjectDocument) {
     description: project.description,
     technologies: project.technologies,
     highlights: project.highlights,
-    media: project.media.map((media) => media.url),
+    media: project.media,
     githubUrl: project.githubUrl,
     liveUrl: project.liveUrl,
     caseStudyUrl: project.caseStudyUrl,

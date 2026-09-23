@@ -12,6 +12,7 @@ export interface AdminProjectItem {
   id: string;
   title: string;
   slug: string;
+  description?: string;
   category: string;
   status: ProjectPublishStatus;
   isFeatured: boolean;
