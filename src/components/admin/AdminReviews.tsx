@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { Icon } from '../ui/Icon';
 import { Button } from '../ui/Button';
 import { INITIAL_ADMIN_REVIEWS } from '../../data/adminMockData';
-import { AdminReviewItem, ReviewStatus } from '../../types/admin';
+import { LegacyAdminReviewItem, ReviewStatus } from '../../types/admin';
 
 export const AdminReviews: React.FC = () => {
-  const [reviews, setReviews] = useState<AdminReviewItem[]>(INITIAL_ADMIN_REVIEWS);
+  const [reviews, setReviews] = useState<LegacyAdminReviewItem[]>(INITIAL_ADMIN_REVIEWS);
   const [filter, setFilter] = useState<'all' | 'approved' | 'pending'>('all');
   const [showAddForm, setShowAddForm] = useState(false);
 
@@ -13,7 +13,7 @@ export const AdminReviews: React.FC = () => {
   const [authorName, setAuthorName] = useState('');
   const [authorRole, setAuthorRole] = useState('');
   const [organization, setOrganization] = useState('');
-  const [relationship, setRelationship] = useState<AdminReviewItem['relationship']>('colleague');
+  const [relationship, setRelationship] = useState<LegacyAdminReviewItem['relationship']>('colleague');
   const [content, setContent] = useState('');
 
   const filteredReviews = reviews.filter((r) => {
@@ -38,7 +38,7 @@ export const AdminReviews: React.FC = () => {
     e.preventDefault();
     if (!authorName.trim() || !content.trim()) return;
 
-    const newEntry: AdminReviewItem = {
+    const newEntry: LegacyAdminReviewItem = {
       id: `rev-${Date.now()}`,
       authorName: authorName.trim(),
       authorRole: authorRole.trim() || 'Software Collaborator',
@@ -161,7 +161,7 @@ export const AdminReviews: React.FC = () => {
               <select
                 value={relationship}
                 onChange={(e) =>
-                  setRelationship(e.target.value as AdminReviewItem['relationship'])
+                  setRelationship(e.target.value as LegacyAdminReviewItem['relationship'])
                 }
                 className="w-full sm:w-64 px-3 py-2 rounded-lg border border-stone-300 text-xs font-mono focus:ring-2 focus:ring-stone-900 focus:outline-none"
               >

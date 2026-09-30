@@ -9,6 +9,10 @@ const reviewBodySchema = Joi.object({
   comment: Joi.string().trim().min(10).max(5000).required(),
 }).required();
 
+const reviewIdSchema = Joi.object({
+  id: Joi.string().hex().length(24).required(),
+}).required();
+
 export const validatePublicReview: RequestHandler = (request, _response, next) => {
   const { error, value } = reviewBodySchema.validate(request.body, {
     abortEarly: false,
@@ -21,5 +25,16 @@ export const validatePublicReview: RequestHandler = (request, _response, next) =
   }
 
   request.body = value;
+  next();
+};
+
+export const validateReviewId: RequestHandler = (request, _response, next) => {
+  const { error } = reviewIdSchema.validate(request.params, { abortEarly: false });
+
+  if (error) {
+    next(new HttpError(400, 'Invalid review id'));
+    return;
+  }
+
   next();
 };

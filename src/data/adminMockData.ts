@@ -1,7 +1,7 @@
 import {
   AdminNavItem,
   AdminProjectItem,
-  AdminReviewItem,
+  LegacyAdminReviewItem,
   AdminMessageItem,
   AdminAnalyticsData,
 } from '../types/admin';
@@ -90,7 +90,7 @@ export const INITIAL_ADMIN_PROJECTS: AdminProjectItem[] = [
   },
 ];
 
-export const INITIAL_ADMIN_REVIEWS: AdminReviewItem[] = [
+export const INITIAL_ADMIN_REVIEWS: LegacyAdminReviewItem[] = [
   {
     id: 'rev-1',
     authorName: 'Senior ICT Colleague',

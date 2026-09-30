@@ -22,9 +22,22 @@ export interface AdminProjectItem {
   liveUrl?: string;
 }
 
-export type ReviewStatus = 'approved' | 'pending' | 'archived';
+// Authoritative review domain types consolidated from src/lib/reviews
+export type {
+  ReviewStatus,
+  ReviewProjectSummary,
+  AdminReviewItem,
+  PublicProjectReview,
+  SubmitProjectReviewPayload,
+  SubmitProjectReviewResponse,
+} from '../lib/reviews';
+import type { ReviewStatus } from '../lib/reviews';
 
-export interface AdminReviewItem {
+/**
+ * UI-only compatibility type preserved strictly for the existing mock UI
+ * in AdminReviews.tsx and adminMockData.ts until AdminReviews.tsx is connected to the API.
+ */
+export interface LegacyAdminReviewItem {
   id: string;
   authorName: string;
   authorRole: string;
