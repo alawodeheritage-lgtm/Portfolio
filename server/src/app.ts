@@ -8,6 +8,7 @@ import { authRouter } from './routes/auth.routes.js';
 import { adminProjectRouter } from './routes/admin-project.routes.js';
 import { adminReviewRouter } from './routes/admin-review.routes.js';
 import { projectRouter } from './routes/project.routes.js';
+import { adminMessageRouter, contactRouter } from './routes/contact.routes.js';
 
 export function createApp() {
   const app = express();
@@ -40,6 +41,8 @@ export function createApp() {
   app.use('/api/projects', projectRouter);
   app.use('/api/admin/projects', adminProjectRouter);
   app.use('/api/admin/reviews', adminReviewRouter);
+  app.use('/api/contact', contactRouter);
+  app.use('/api/admin/messages', adminMessageRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

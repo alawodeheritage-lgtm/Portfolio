@@ -15,14 +15,20 @@ import { AdminProjects } from './components/admin/AdminProjects';
 import { AdminReviews } from './components/admin/AdminReviews';
 import { AdminMessages } from './components/admin/AdminMessages';
 import { AdminAnalytics } from './components/admin/AdminAnalytics';
+import { ProjectDetailPage } from './components/projects/ProjectDetailPage';
 import { BRAND_TAGLINE, CORE_MESSAGE } from './types/navigation';
-import { SELECTED_PROJECTS } from './data/projects';
 import { AuthenticatedAdmin, getCurrentAdmin } from './lib/auth';
+import { fetchPublicProjects } from './lib/projects';
+import type { Project } from './types/project';
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState('/');
   const [admin, setAdmin] = useState<AuthenticatedAdmin | null>(null);
   const [authState, setAuthState] = useState<'idle' | 'checking' | 'authenticated' | 'unauthenticated'>('idle');
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(true);
+  const [projectsError, setProjectsError] = useState<string | null>(null);
+  const featuredProject = projects.find((project) => project.isFeatured) || projects[0];
 
   const isAdminRoute = currentPath === '/admin' || currentPath.startsWith('/admin/');
   const isProtectedAdminRoute = isAdminRoute && currentPath !== '/admin/login';
@@ -30,6 +36,27 @@ export default function App() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentPath]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    fetchPublicProjects()
+      .then((publicProjects) => {
+        if (isActive) setProjects(publicProjects);
+      })
+      .catch((error: unknown) => {
+        if (isActive) {
+          setProjectsError(error instanceof Error ? error.message : 'Unable to load projects.');
+        }
+      })
+      .finally(() => {
+        if (isActive) setIsLoadingProjects(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isProtectedAdminRoute) {
@@ -60,70 +87,12 @@ export default function App() {
 
   // If visiting a specific project case-study placeholder route
   if (currentPath.startsWith('/projects/') && currentPath !== '/projects') {
-    const slug = currentPath.replace('/projects/', '');
-    const matchedProject = SELECTED_PROJECTS.find((p) => p.slug === slug);
-
     return (
       <RootLayout currentPath={currentPath} onNavigate={setCurrentPath}>
-        <div className="py-16 sm:py-24 bg-[#FAFAF9] flex-1">
-          <Container size="narrow">
-            <div className="bg-white rounded-2xl border border-stone-200 p-8 sm:p-12 space-y-6 shadow-xs">
-              <div className="flex items-center gap-2 text-xs font-mono text-stone-500">
-                <span className="uppercase">{matchedProject?.category || 'Project Case Study'}</span>
-                <span>•</span>
-                <span className="text-stone-700 font-semibold">{currentPath}</span>
-              </div>
-
-              <div>
-                <h1 className="text-3xl sm:text-4xl font-bold font-display text-stone-900 tracking-tight">
-                  {matchedProject ? matchedProject.title : 'Project Case Study'}
-                </h1>
-                <p className="mt-2 text-stone-600 text-lg">
-                  {matchedProject?.tagline || 'In-depth engineering documentation'}
-                </p>
-              </div>
-
-              <div className="p-4 bg-stone-50 rounded-lg border border-stone-200 text-sm text-stone-700 space-y-2 font-mono">
-                <div className="flex items-center gap-2 text-stone-900 font-semibold">
-                  <Icon name="info" size="sm" className="text-stone-700" />
-                  <span>Case Study Route Placeholder</span>
-                </div>
-                <p className="text-xs text-stone-600 leading-relaxed font-sans">
-                  The full architectural case study—covering the problem definition, system architecture, database schema, trade-offs, and lessons learned—will be implemented in the dedicated Project Case Studies phase.
-                </p>
-              </div>
-
-              {matchedProject?.technologies && (
-                <div className="space-y-2">
-                  <span className="text-xs font-mono uppercase tracking-wider text-stone-500">
-                    Technology Stack
-                  </span>
-                  <div className="flex flex-wrap gap-2">
-                    {matchedProject.technologies.map((t) => (
-                      <span
-                        key={t}
-                        className="px-2.5 py-1 rounded text-xs font-mono bg-stone-100 border border-stone-200 text-stone-800"
-                      >
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="pt-4 border-t border-stone-100 flex items-center gap-3">
-                <Button
-                  variant="primary"
-                  size="md"
-                  leftIcon="arrow_back"
-                  onClick={() => setCurrentPath('/')}
-                >
-                  Return to Selected Work
-                </Button>
-              </div>
-            </div>
-          </Container>
-        </div>
+        <ProjectDetailPage
+          slug={decodeURIComponent(currentPath.slice('/projects/'.length))}
+          onNavigate={setCurrentPath}
+        />
       </RootLayout>
     );
   }
@@ -158,7 +127,12 @@ export default function App() {
               </div>
 
               {/* Projects Grid */}
-              <SelectedWorkSection onNavigate={setCurrentPath} />
+              <SelectedWorkSection
+                onNavigate={setCurrentPath}
+                projects={projects}
+                isLoading={isLoadingProjects}
+                error={projectsError}
+              />
             </div>
           </Container>
         </div>
@@ -327,11 +301,9 @@ export default function App() {
               <Button
                 variant="primary"
                 size="lg"
-                rightIcon="arrow_downward"
-                onClick={() => {
-                  const el = document.getElementById('selected-work');
-                  if (el) el.scrollIntoView({ behavior: 'smooth' });
-                }}
+                rightIcon="arrow_forward"
+                disabled={isLoadingProjects || !featuredProject}
+                onClick={() => featuredProject && setCurrentPath(`/projects/${encodeURIComponent(featuredProject.slug)}`)}
               >
                 Explore Selected Work
               </Button>
@@ -360,7 +332,12 @@ export default function App() {
       </section>
 
       {/* Selected Work Section (ASOCOMMS, FinTrack, SwiftTask, Netflix Clone) */}
-      <SelectedWorkSection onNavigate={setCurrentPath} />
+      <SelectedWorkSection
+        onNavigate={setCurrentPath}
+        projects={projects}
+        isLoading={isLoadingProjects}
+        error={projectsError}
+      />
 
       {/* Skills & Ongoing Exploration Section */}
       <SkillsSection />

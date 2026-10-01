@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Container } from '../ui/Container';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
+import { submitContactMessage } from '../../lib/contact';
 
 interface ContactFormData {
   name: string;
@@ -67,7 +68,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onNavigate }) => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!validate()) {
@@ -77,11 +78,20 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onNavigate }) => {
     setStatus('submitting');
     setErrors({});
 
-    // Client-side UI simulation for frontend form handling
-    // (Backend Express API endpoint will be attached in a subsequent stage)
-    setTimeout(() => {
+    try {
+      await submitContactMessage({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        message: formData.message.trim(),
+      });
+      setFormData({ name: '', email: '', message: '' });
       setStatus('success');
-    }, 900);
+    } catch (error) {
+      setErrors({
+        general: error instanceof Error ? error.message : 'Unable to send your message. Please try again.',
+      });
+      setStatus('error');
+    }
   };
 
   const handleReset = () => {
@@ -153,9 +163,9 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onNavigate }) => {
               </div>
 
               <div className="p-4 rounded-xl bg-white border border-stone-200 text-xs font-mono text-stone-600 space-y-1">
-                <div className="text-stone-900 font-semibold">Backend Integration Notice</div>
+                <div className="text-stone-900 font-semibold">Contact channel</div>
                 <p className="font-sans text-stone-600 text-xs leading-relaxed">
-                  Frontend interface active. Incoming messages will route through the dedicated Express API upon backend configuration.
+                  Messages are submitted securely and stored for follow-up.
                 </p>
               </div>
             </div>
@@ -171,16 +181,11 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onNavigate }) => {
 
                     <div className="space-y-2">
                       <h3 className="text-2xl font-bold font-display text-stone-950">
-                        Message prepared successfully
+                        Message sent successfully
                       </h3>
                       <p className="text-stone-600 text-sm sm:text-base leading-relaxed">
-                        Thank you for reaching out, <strong className="font-semibold text-stone-900">{formData.name}</strong>. Your message has been received on the client interface and is ready for the upcoming server connection.
+                        Thank you for reaching out. Your message has been received, and I’ll follow up as soon as I can.
                       </p>
-                    </div>
-
-                    <div className="p-4 rounded-lg bg-stone-50 border border-stone-200 text-xs font-mono text-stone-600 space-y-1">
-                      <div><strong className="text-stone-800">Sender:</strong> {formData.email}</div>
-                      <div className="truncate"><strong className="text-stone-800">Preview:</strong> &quot;{formData.message.slice(0, 70)}{formData.message.length > 70 ? '...' : ''}&quot;</div>
                     </div>
 
                     <div className="pt-2 flex flex-wrap items-center gap-3">
@@ -243,11 +248,10 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onNavigate }) => {
                         aria-invalid={Boolean(errors.name)}
                         aria-describedby={errors.name ? 'contact-name-error' : undefined}
                         placeholder="e.g., Alex Morgan"
-                        className={`w-full px-3.5 py-2.5 rounded-lg border bg-stone-50/50 text-stone-900 placeholder:text-stone-400 text-sm transition-colors focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-stone-900 ${
-                          errors.name
+                        className={`w-full px-3.5 py-2.5 rounded-lg border bg-stone-50/50 text-stone-900 placeholder:text-stone-400 text-sm transition-colors focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-stone-900 ${errors.name
                             ? 'border-rose-400 bg-rose-50/20'
                             : 'border-stone-300 hover:border-stone-400'
-                        } disabled:opacity-60 disabled:cursor-not-allowed`}
+                          } disabled:opacity-60 disabled:cursor-not-allowed`}
                       />
                       {errors.name && (
                         <p
@@ -283,11 +287,10 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onNavigate }) => {
                         aria-invalid={Boolean(errors.email)}
                         aria-describedby={errors.email ? 'contact-email-error' : undefined}
                         placeholder="you@example.com"
-                        className={`w-full px-3.5 py-2.5 rounded-lg border bg-stone-50/50 text-stone-900 placeholder:text-stone-400 text-sm transition-colors focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-stone-900 ${
-                          errors.email
+                        className={`w-full px-3.5 py-2.5 rounded-lg border bg-stone-50/50 text-stone-900 placeholder:text-stone-400 text-sm transition-colors focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-stone-900 ${errors.email
                             ? 'border-rose-400 bg-rose-50/20'
                             : 'border-stone-300 hover:border-stone-400'
-                        } disabled:opacity-60 disabled:cursor-not-allowed`}
+                          } disabled:opacity-60 disabled:cursor-not-allowed`}
                       />
                       {errors.email && (
                         <p
@@ -322,11 +325,10 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onNavigate }) => {
                         aria-invalid={Boolean(errors.message)}
                         aria-describedby={errors.message ? 'contact-message-error' : undefined}
                         placeholder="Write your note, question, or project inquiry..."
-                        className={`w-full px-3.5 py-2.5 rounded-lg border bg-stone-50/50 text-stone-900 placeholder:text-stone-400 text-sm transition-colors resize-y focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-stone-900 ${
-                          errors.message
+                        className={`w-full px-3.5 py-2.5 rounded-lg border bg-stone-50/50 text-stone-900 placeholder:text-stone-400 text-sm transition-colors resize-y focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-stone-900 ${errors.message
                             ? 'border-rose-400 bg-rose-50/20'
                             : 'border-stone-300 hover:border-stone-400'
-                        } disabled:opacity-60 disabled:cursor-not-allowed`}
+                          } disabled:opacity-60 disabled:cursor-not-allowed`}
                       />
                       {errors.message && (
                         <p

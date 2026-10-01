@@ -3,18 +3,41 @@ import { Container } from '../ui/Container';
 import { SectionHeading } from '../ui/SectionHeading';
 import { FeaturedProjectCard } from '../projects/FeaturedProjectCard';
 import { ProjectCard } from '../projects/ProjectCard';
-import { SELECTED_PROJECTS } from '../../data/projects';
 import { Button } from '../ui/Button';
+import type { Project } from '../../types/project';
 
 interface SelectedWorkSectionProps {
   onNavigate?: (path: string) => void;
+  projects: Project[];
+  isLoading: boolean;
+  error: string | null;
 }
 
 export const SelectedWorkSection: React.FC<SelectedWorkSectionProps> = ({
   onNavigate,
+  projects,
+  isLoading,
+  error,
 }) => {
-  const flagshipProject = SELECTED_PROJECTS.find((p) => p.isFlagship) || SELECTED_PROJECTS[0];
-  const secondaryProjects = SELECTED_PROJECTS.filter((p) => p.id !== flagshipProject.id);
+  const flagshipProject = projects.find((project) => project.isFeatured) || projects[0];
+  const secondaryProjects = projects.filter((project) => project.id !== flagshipProject?.id);
+
+  if (isLoading || error || projects.length === 0) {
+    return (
+      <section className="py-16 sm:py-24 border-b border-stone-200/80 bg-[#FAFAF9]" id="selected-work">
+        <Container size="default">
+          <SectionHeading
+            tag="SELECTED WORK"
+            title="Featured Engineering Projects"
+            description="Practical applications built with an emphasis on maintainable architecture, structured state handling, and focused user workflows."
+          />
+          <p className="mt-8 text-sm text-stone-600" role={error ? 'alert' : 'status'}>
+            {isLoading ? 'Loading projects...' : error || 'No published projects are available yet.'}
+          </p>
+        </Container>
+      </section>
+    );
+  }
 
   return (
     <section className="py-16 sm:py-24 border-b border-stone-200/80 bg-[#FAFAF9]" id="selected-work">
@@ -28,7 +51,7 @@ export const SelectedWorkSection: React.FC<SelectedWorkSectionProps> = ({
           />
           <div className="shrink-0">
             <span className="text-xs font-mono text-stone-500 bg-stone-100 border border-stone-200 px-3 py-1.5 rounded-full">
-              4 Projects Documented
+              {projects.length} Projects Documented
             </span>
           </div>
         </div>

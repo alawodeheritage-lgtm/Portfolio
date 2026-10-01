@@ -88,7 +88,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             variant="outline"
             size="sm"
             rightIcon="arrow_forward"
-            onClick={() => handleAction(project.caseStudyUrl)}
+            onClick={() => handleAction(`/projects/${encodeURIComponent(project.slug)}`)}
             className="w-full sm:w-auto"
           >
             View Project Case Study
@@ -99,7 +99,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
               href={project.githubUrl}
               onClick={(e) => {
                 e.preventDefault();
-                handleAction(project.caseStudyUrl);
+                handleAction(`/projects/${encodeURIComponent(project.slug)}`);
               }}
               className="p-1.5 text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded-md transition-colors"
               title="View repository"

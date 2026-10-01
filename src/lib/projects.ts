@@ -1,3 +1,5 @@
+import type { Project } from '../types/project';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 
 export interface AdminProjectApiProject {
@@ -57,6 +59,30 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 export async function fetchAdminProjects(): Promise<AdminProjectApiProject[]> {
   const response = await request<ProjectsResponse>('/api/admin/projects');
   return response.projects;
+}
+
+export async function fetchPublicProjects(): Promise<Project[]> {
+  const response = await request<ProjectsResponse>('/api/projects');
+
+  return response.projects.map((project) => ({
+    id: project.id,
+    slug: project.slug,
+    title: project.title,
+    tagline: project.tagline ?? '',
+    category: project.category ?? '',
+    description: project.description,
+    technologies: project.technologies,
+    isFeatured: project.isFeatured,
+    highlights: project.highlights,
+    githubUrl: project.githubUrl,
+    liveUrl: project.liveUrl,
+    caseStudyUrl: project.caseStudyUrl ?? `/projects/${project.slug}`,
+  }));
+}
+
+export async function fetchPublicProjectBySlug(slug: string): Promise<AdminProjectApiProject> {
+  const response = await request<ProjectResponse>(`/api/projects/${encodeURIComponent(slug)}`);
+  return response.project;
 }
 
 export async function createAdminProject(payload: Record<string, unknown>): Promise<AdminProjectApiProject> {

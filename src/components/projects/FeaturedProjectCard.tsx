@@ -95,7 +95,7 @@ export const FeaturedProjectCard: React.FC<FeaturedProjectCardProps> = ({
               variant="primary"
               size="md"
               rightIcon="arrow_forward"
-              onClick={() => handleAction(project.caseStudyUrl)}
+              onClick={() => handleAction(`/projects/${encodeURIComponent(project.slug)}`)}
             >
               View Engineering Case Study
             </Button>
@@ -104,7 +104,7 @@ export const FeaturedProjectCard: React.FC<FeaturedProjectCardProps> = ({
                 variant="outline"
                 size="md"
                 leftIcon="code"
-                onClick={() => handleAction(project.caseStudyUrl)}
+                onClick={() => handleAction(`/projects/${encodeURIComponent(project.slug)}`)}
               >
                 Inspect Code Architecture
               </Button>
