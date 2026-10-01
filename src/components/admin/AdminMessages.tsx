@@ -1,8 +1,15 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Icon } from '../ui/Icon';
 import { Button } from '../ui/Button';
-import { INITIAL_ADMIN_MESSAGES } from '../../data/adminMockData';
 import { AdminMessageItem } from '../../types/admin';
+import {
+  archiveAdminMessage,
+  deleteAdminMessage,
+  fetchAdminMessages,
+  markAdminMessageRead,
+  markAdminMessageUnread,
+  unarchiveAdminMessage,
+} from '../../lib/messages';
 
 type MessageFolder = 'inbox' | 'unread' | 'read' | 'archived' | 'all';
 
@@ -38,17 +45,61 @@ const QUICK_REPLY_TEMPLATES: QuickReplyTemplate[] = [
 ];
 
 export const AdminMessages: React.FC = () => {
-  const [messages, setMessages] = useState<AdminMessageItem[]>(INITIAL_ADMIN_MESSAGES);
+  const [messages, setMessages] = useState<AdminMessageItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isMutating, setIsMutating] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [activeFolder, setActiveFolder] = useState<MessageFolder>('inbox');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMessageId, setSelectedMessageId] = useState<string>(
-    INITIAL_ADMIN_MESSAGES[0]?.id || ''
-  );
+  const [selectedMessageId, setSelectedMessageId] = useState('');
   const [showMobileDetail, setShowMobileDetail] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [deleteModalMsgId, setDeleteModalMsgId] = useState<string | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [showTemplatesDropdown, setShowTemplatesDropdown] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setIsLoading(true);
+    setLoadError(null);
+
+    fetchAdminMessages()
+      .then((fetchedMessages) => {
+        if (!active) return;
+        setMessages(fetchedMessages);
+        setSelectedMessageId((selectedId) =>
+          fetchedMessages.some((message) => message.id === selectedId)
+            ? selectedId
+            : fetchedMessages[0]?.id || '',
+        );
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setLoadError(error instanceof Error ? error.message : 'Unable to load messages.');
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [retryCount]);
+
+  const applyMessageUpdate = (updatedMessage: AdminMessageItem) => {
+    setMessages((currentMessages) =>
+      currentMessages.map((message) =>
+        message.id === updatedMessage.id ? updatedMessage : message,
+      ),
+    );
+  };
+
+  const formatReceivedAt = (receivedAt: string) => {
+    const date = new Date(receivedAt);
+    return Number.isNaN(date.getTime()) ? receivedAt : date.toLocaleString();
+  };
 
   // Trigger feedback toast
   const showToast = (text: string) => {
@@ -106,48 +157,84 @@ export const AdminMessages: React.FC = () => {
   }, [messages, selectedMessageId]);
 
   // Message selection handler
-  const handleSelectMessage = (msg: AdminMessageItem) => {
+  const handleSelectMessage = async (msg: AdminMessageItem) => {
     setSelectedMessageId(msg.id);
     setShowMobileDetail(true);
-    // Automatically mark as read on selection if unread
     if (!msg.isRead) {
-      setMessages((prev) =>
-        prev.map((item) => (item.id === msg.id ? { ...item, isRead: true } : item))
-      );
+      try {
+        setIsMutating(true);
+        applyMessageUpdate(await markAdminMessageRead(msg.id));
+      } catch (error) {
+        setLoadError(error instanceof Error ? error.message : 'Unable to mark message as read.');
+      } finally {
+        setIsMutating(false);
+      }
     }
   };
 
   // Toggle Read / Unread
-  const handleToggleRead = (id: string, e?: React.MouseEvent) => {
+  const handleToggleRead = async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    setMessages((prev) => {
-      const target = prev.find((m) => m.id === id);
-      const nextReadState = target ? !target.isRead : true;
-      showToast(nextReadState ? 'Marked as read' : 'Marked as unread');
-      return prev.map((m) => (m.id === id ? { ...m, isRead: nextReadState } : m));
-    });
+    if (isMutating) return;
+    const target = messages.find((message) => message.id === id);
+    if (!target) return;
+
+    try {
+      setIsMutating(true);
+      const updatedMessage = target.isRead
+        ? await markAdminMessageUnread(id)
+        : await markAdminMessageRead(id);
+      applyMessageUpdate(updatedMessage);
+      showToast(updatedMessage.isRead ? 'Marked as read' : 'Marked as unread');
+      setLoadError(null);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Unable to update message read state.');
+    } finally {
+      setIsMutating(false);
+    }
   };
 
   // Mark all currently visible messages as read
-  const handleMarkAllAsRead = () => {
+  const handleMarkAllAsRead = async () => {
+    if (isMutating) return;
     const unreadIds = new Set(filteredMessages.filter((m) => !m.isRead).map((m) => m.id));
     if (unreadIds.size === 0) return;
 
-    setMessages((prev) =>
-      prev.map((m) => (unreadIds.has(m.id) ? { ...m, isRead: true } : m))
-    );
-    showToast(`Marked ${unreadIds.size} message${unreadIds.size > 1 ? 's' : ''} as read`);
+    try {
+      setIsMutating(true);
+      const updatedMessages = await Promise.all(
+        [...unreadIds].map((id) => markAdminMessageRead(id)),
+      );
+      updatedMessages.forEach(applyMessageUpdate);
+      showToast(`Marked ${updatedMessages.length} message${updatedMessages.length > 1 ? 's' : ''} as read`);
+      setLoadError(null);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Unable to mark messages as read.');
+    } finally {
+      setIsMutating(false);
+    }
   };
 
   // Toggle Archive / Restore
-  const handleToggleArchive = (id: string, e?: React.MouseEvent) => {
+  const handleToggleArchive = async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    setMessages((prev) => {
-      const target = prev.find((m) => m.id === id);
-      const nextArchived = target ? !target.isArchived : false;
-      showToast(nextArchived ? 'Message moved to archive' : 'Message restored to inbox');
-      return prev.map((m) => (m.id === id ? { ...m, isArchived: nextArchived } : m));
-    });
+    if (isMutating) return;
+    const target = messages.find((message) => message.id === id);
+    if (!target) return;
+
+    try {
+      setIsMutating(true);
+      const updatedMessage = target.isArchived
+        ? await unarchiveAdminMessage(id)
+        : await archiveAdminMessage(id);
+      applyMessageUpdate(updatedMessage);
+      showToast(updatedMessage.isArchived ? 'Message moved to archive' : 'Message restored to inbox');
+      setLoadError(null);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Unable to update archive state.');
+    } finally {
+      setIsMutating(false);
+    }
   };
 
   // Open safe delete confirmation
@@ -157,20 +244,28 @@ export const AdminMessages: React.FC = () => {
   };
 
   // Confirm delete
-  const handleConfirmDelete = () => {
-    if (!deleteModalMsgId) return;
+  const handleConfirmDelete = async () => {
+    if (!deleteModalMsgId || isMutating) return;
 
-    const remaining = messages.filter((m) => m.id !== deleteModalMsgId);
-    setMessages(remaining);
+    try {
+      setIsMutating(true);
+      await deleteAdminMessage(deleteModalMsgId);
+      const remaining = messages.filter((message) => message.id !== deleteModalMsgId);
+      setMessages(remaining);
 
-    // If deleting the active message, select next available
-    if (selectedMessageId === deleteModalMsgId) {
-      const nextRemaining = filteredMessages.filter((m) => m.id !== deleteModalMsgId);
-      setSelectedMessageId(nextRemaining[0]?.id || remaining[0]?.id || '');
+      if (selectedMessageId === deleteModalMsgId) {
+        const nextRemaining = filteredMessages.filter((message) => message.id !== deleteModalMsgId);
+        setSelectedMessageId(nextRemaining[0]?.id || remaining[0]?.id || '');
+      }
+
+      setDeleteModalMsgId(null);
+      showToast('Message permanently deleted');
+      setLoadError(null);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Unable to delete message.');
+    } finally {
+      setIsMutating(false);
     }
-
-    setDeleteModalMsgId(null);
-    showToast('Message permanently removed from catalog');
   };
 
   // Copy Email to clipboard
@@ -203,6 +298,21 @@ export const AdminMessages: React.FC = () => {
         </div>
       )}
 
+      {loadError && (
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-sm text-rose-800 flex items-center justify-between gap-3" role="alert">
+          <span>{loadError}</span>
+          {messages.length === 0 && (
+            <button
+              type="button"
+              onClick={() => setRetryCount((count) => count + 1)}
+              className="shrink-0 font-medium underline"
+            >
+              Retry
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Top Controls: Folder Navigation + Real-Time Filter + Bulk Utility */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-stone-200 shadow-2xs">
         {/* Folder Pills */}
@@ -211,11 +321,10 @@ export const AdminMessages: React.FC = () => {
             id="tab-inbox"
             type="button"
             onClick={() => setActiveFolder('inbox')}
-            className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-              activeFolder === 'inbox'
+            className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${activeFolder === 'inbox'
                 ? 'bg-stone-900 text-white'
                 : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-            }`}
+              }`}
           >
             <Icon name="inbox" size="sm" />
             <span>Inbox ({stats.inbox})</span>
@@ -225,11 +334,10 @@ export const AdminMessages: React.FC = () => {
             id="tab-unread"
             type="button"
             onClick={() => setActiveFolder('unread')}
-            className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-              activeFolder === 'unread'
+            className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${activeFolder === 'unread'
                 ? 'bg-stone-900 text-white'
                 : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-            }`}
+              }`}
           >
             <span className="w-2 h-2 rounded-full bg-amber-500" />
             <span>Unread ({stats.unread})</span>
@@ -239,11 +347,10 @@ export const AdminMessages: React.FC = () => {
             id="tab-read"
             type="button"
             onClick={() => setActiveFolder('read')}
-            className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-              activeFolder === 'read'
+            className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${activeFolder === 'read'
                 ? 'bg-stone-900 text-white'
                 : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-            }`}
+              }`}
           >
             <Icon name="mark_email_read" size="sm" />
             <span>Read ({stats.read})</span>
@@ -253,11 +360,10 @@ export const AdminMessages: React.FC = () => {
             id="tab-archived"
             type="button"
             onClick={() => setActiveFolder('archived')}
-            className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-              activeFolder === 'archived'
+            className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${activeFolder === 'archived'
                 ? 'bg-stone-900 text-white'
                 : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-            }`}
+              }`}
           >
             <Icon name="archive" size="sm" />
             <span>Archived ({stats.archived})</span>
@@ -267,11 +373,10 @@ export const AdminMessages: React.FC = () => {
             id="tab-all"
             type="button"
             onClick={() => setActiveFolder('all')}
-            className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap ${
-              activeFolder === 'all'
+            className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap ${activeFolder === 'all'
                 ? 'bg-stone-900 text-white'
                 : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-            }`}
+              }`}
           >
             All ({stats.all})
           </button>
@@ -313,6 +418,7 @@ export const AdminMessages: React.FC = () => {
               id="mark-all-read-btn"
               type="button"
               onClick={handleMarkAllAsRead}
+              disabled={isMutating}
               className="px-2.5 py-1.5 text-xs font-mono text-stone-700 hover:text-stone-950 hover:bg-stone-100 rounded-md border border-stone-200 flex items-center gap-1 whitespace-nowrap transition-colors"
               title="Mark all current messages as read"
             >
@@ -327,9 +433,8 @@ export const AdminMessages: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Messages List (Visible on desktop; toggled on mobile) */}
         <div
-          className={`lg:col-span-5 bg-white rounded-xl border border-stone-200 shadow-2xs overflow-hidden flex flex-col ${
-            showMobileDetail ? 'hidden lg:flex' : 'flex'
-          }`}
+          className={`lg:col-span-5 bg-white rounded-xl border border-stone-200 shadow-2xs overflow-hidden flex flex-col ${showMobileDetail ? 'hidden lg:flex' : 'flex'
+            }`}
           id="messages-list-container"
         >
           {/* List Header */}
@@ -344,7 +449,11 @@ export const AdminMessages: React.FC = () => {
 
           {/* List Items or Empty State */}
           <div className="divide-y divide-stone-100 max-h-[700px] overflow-y-auto">
-            {filteredMessages.length === 0 ? (
+            {isLoading ? (
+              <p className="py-14 px-6 text-center text-sm text-stone-500" role="status">
+                Loading messages...
+              </p>
+            ) : filteredMessages.length === 0 ? (
               <div className="py-14 px-6 text-center space-y-3" id="messages-list-empty">
                 <div className="w-10 h-10 rounded-full bg-stone-100 text-stone-400 mx-auto flex items-center justify-center">
                   <Icon name="drafts" size="md" />
@@ -354,19 +463,19 @@ export const AdminMessages: React.FC = () => {
                     {searchQuery
                       ? 'No matching messages found'
                       : activeFolder === 'unread'
-                      ? 'No unread messages'
-                      : activeFolder === 'archived'
-                      ? 'Archive is empty'
-                      : 'No messages in this folder'}
+                        ? 'No unread messages'
+                        : activeFolder === 'archived'
+                          ? 'Archive is empty'
+                          : 'No messages in this folder'}
                   </h3>
                   <p className="text-xs text-stone-600 max-w-xs mx-auto leading-relaxed">
                     {searchQuery
                       ? `No inquiries match "${searchQuery}". Try revising your keywords or clearing the search.`
                       : activeFolder === 'unread'
-                      ? 'All messages have been reviewed. New inquiries will appear here when submitted.'
-                      : activeFolder === 'archived'
-                      ? 'Messages you move to the archive will be saved here for historical reference.'
-                      : 'No messages are currently listed.'}
+                        ? 'All messages have been reviewed. New inquiries will appear here when submitted.'
+                        : activeFolder === 'archived'
+                          ? 'Messages you move to the archive will be saved here for historical reference.'
+                          : 'No messages are currently listed.'}
                   </p>
                 </div>
                 {(searchQuery || activeFolder !== 'inbox') && (
@@ -398,13 +507,12 @@ export const AdminMessages: React.FC = () => {
                         handleSelectMessage(msg);
                       }
                     }}
-                    className={`p-4 cursor-pointer transition-all relative border-l-4 text-left outline-none ${
-                      isSelected
+                    className={`p-4 cursor-pointer transition-all relative border-l-4 text-left outline-none ${isSelected
                         ? 'bg-stone-100/90 border-stone-900'
                         : msg.isRead
-                        ? 'bg-white hover:bg-stone-50 border-transparent'
-                        : 'bg-amber-50/20 hover:bg-amber-50/40 border-amber-500'
-                    }`}
+                          ? 'bg-white hover:bg-stone-50 border-transparent'
+                          : 'bg-amber-50/20 hover:bg-amber-50/40 border-amber-500'
+                      }`}
                   >
                     {/* Top line: Sender Name + Timestamp */}
                     <div className="flex items-start justify-between gap-2">
@@ -419,18 +527,17 @@ export const AdminMessages: React.FC = () => {
                           <span className="w-2 h-2 rounded-full bg-transparent shrink-0" />
                         )}
                         <span
-                          className={`text-sm truncate ${
-                            msg.isRead
+                          className={`text-sm truncate ${msg.isRead
                               ? 'font-medium text-stone-800'
                               : 'font-bold text-stone-950'
-                          }`}
+                            }`}
                         >
                           {msg.senderName}
                         </span>
                       </div>
 
                       <span className="text-[11px] font-mono text-stone-600 shrink-0 whitespace-nowrap">
-                        {msg.receivedAt}
+                        {formatReceivedAt(msg.receivedAt)}
                       </span>
                     </div>
 
@@ -448,11 +555,10 @@ export const AdminMessages: React.FC = () => {
 
                     {/* Subject */}
                     <div
-                      className={`text-xs pl-4 pt-1 line-clamp-1 ${
-                        msg.isRead
+                      className={`text-xs pl-4 pt-1 line-clamp-1 ${msg.isRead
                           ? 'font-normal text-stone-700'
                           : 'font-semibold text-stone-900'
-                      }`}
+                        }`}
                     >
                       {msg.subject || 'Direct inquiry'}
                     </div>
@@ -468,6 +574,7 @@ export const AdminMessages: React.FC = () => {
                       <button
                         type="button"
                         onClick={(e) => handleToggleRead(msg.id, e)}
+                        disabled={isMutating}
                         className="p-1 rounded text-stone-400 hover:text-stone-800 hover:bg-stone-200/60 transition-colors"
                         title={msg.isRead ? 'Mark as unread' : 'Mark as read'}
                         aria-label={msg.isRead ? 'Mark as unread' : 'Mark as read'}
@@ -482,6 +589,7 @@ export const AdminMessages: React.FC = () => {
                       <button
                         type="button"
                         onClick={(e) => handleToggleArchive(msg.id, e)}
+                        disabled={isMutating}
                         className="p-1 rounded text-stone-400 hover:text-stone-800 hover:bg-stone-200/60 transition-colors"
                         title={msg.isArchived ? 'Restore to inbox' : 'Move to archive'}
                         aria-label={msg.isArchived ? 'Restore to inbox' : 'Move to archive'}
@@ -493,6 +601,7 @@ export const AdminMessages: React.FC = () => {
                       <button
                         type="button"
                         onClick={(e) => handleOpenDeleteModal(msg.id, e)}
+                        disabled={isMutating}
                         className="p-1 rounded text-stone-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
                         title="Delete message"
                         aria-label="Delete message"
@@ -509,9 +618,8 @@ export const AdminMessages: React.FC = () => {
 
         {/* Right Column: Message Detail View */}
         <div
-          className={`lg:col-span-7 bg-white rounded-xl border border-stone-200 shadow-2xs overflow-hidden ${
-            showMobileDetail ? 'block' : 'hidden lg:block'
-          }`}
+          className={`lg:col-span-7 bg-white rounded-xl border border-stone-200 shadow-2xs overflow-hidden ${showMobileDetail ? 'block' : 'hidden lg:block'
+            }`}
           id="messages-detail-container"
         >
           {selectedMessage ? (
@@ -607,7 +715,7 @@ export const AdminMessages: React.FC = () => {
                   </div>
 
                   <div className="text-stone-600 text-right sm:border-l sm:border-stone-200 sm:pl-3">
-                    <div>Received: {selectedMessage.receivedAt}</div>
+                    <div>Received: {formatReceivedAt(selectedMessage.receivedAt)}</div>
                     <div className="text-[11px] text-stone-600">Origin: /contact form</div>
                   </div>
                 </div>
@@ -619,6 +727,7 @@ export const AdminMessages: React.FC = () => {
                       id="toggle-read-status-btn"
                       type="button"
                       onClick={() => handleToggleRead(selectedMessage.id)}
+                      disabled={isMutating}
                       className="px-2.5 py-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-700 flex items-center gap-1 transition-colors"
                     >
                       <Icon
@@ -632,6 +741,7 @@ export const AdminMessages: React.FC = () => {
                       id="toggle-archive-status-btn"
                       type="button"
                       onClick={() => handleToggleArchive(selectedMessage.id)}
+                      disabled={isMutating}
                       className="px-2.5 py-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-700 flex items-center gap-1 transition-colors"
                     >
                       <Icon name={selectedMessage.isArchived ? 'unarchive' : 'archive'} size="sm" />
@@ -643,6 +753,7 @@ export const AdminMessages: React.FC = () => {
                     id="delete-message-btn"
                     type="button"
                     onClick={() => handleOpenDeleteModal(selectedMessage.id)}
+                    disabled={isMutating}
                     className="px-2.5 py-1 rounded hover:bg-rose-50 text-rose-600 hover:text-rose-700 flex items-center gap-1 transition-colors"
                   >
                     <Icon name="delete" size="sm" />
@@ -760,7 +871,7 @@ export const AdminMessages: React.FC = () => {
                   Delete Inbound Message?
                 </h3>
                 <p className="text-xs text-stone-600 leading-relaxed">
-                  This action will remove the message permanently from your local catalog. This cannot be undone.
+                  This action will permanently delete this message. This cannot be undone.
                 </p>
               </div>
             </div>
@@ -791,9 +902,10 @@ export const AdminMessages: React.FC = () => {
                 id="confirm-delete-message-btn"
                 type="button"
                 onClick={handleConfirmDelete}
+                disabled={isMutating}
                 className="px-3 py-1.5 rounded-md bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold font-mono transition-colors"
               >
-                Confirm Delete
+                {isMutating ? 'Deleting...' : 'Confirm Delete'}
               </button>
             </div>
           </div>
