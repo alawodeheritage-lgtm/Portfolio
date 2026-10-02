@@ -18,6 +18,14 @@ if (!sessionSecret) {
   throw new Error('SESSION_SECRET is required');
 }
 
+const brevoApiKey = process.env.BREVO_API_KEY ?? '';
+const emailFromAddress = process.env.EMAIL_FROM_ADDRESS ?? 'noreply@example.com';
+const emailFromName = process.env.EMAIL_FROM_NAME ?? 'Portfolio';
+const smtpHost = process.env.SMTP_HOST ?? 'smtp-relay.brevo.com';
+const smtpPort = Number(process.env.SMTP_PORT ?? 587);
+const smtpUsername = process.env.SMTP_USERNAME ?? '';
+const smtpPassword = process.env.SMTP_PASSWORD ?? '';
+
 export const env = {
   nodeEnvironment: nodeEnvironment as NodeEnvironment,
   port: Number(process.env.PORT ?? 4000),
@@ -25,6 +33,13 @@ export const env = {
   frontendOrigin: process.env.FRONTEND_ORIGIN ?? 'http://localhost:3000',
   cookieName: process.env.COOKIE_NAME ?? 'portfolio_session',
   sessionSecret,
+  brevoApiKey,
+  emailFromAddress,
+  emailFromName,
+  smtpHost,
+  smtpPort,
+  smtpUsername,
+  smtpPassword,
 };
 
 if (!Number.isInteger(env.port) || env.port < 1 || env.port > 65535) {

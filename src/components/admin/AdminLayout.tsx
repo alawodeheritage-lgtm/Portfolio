@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Icon } from '../ui/Icon';
-import { ADMIN_NAV_ITEMS } from '../../data/adminMockData';
+import { fetchAdminMessages } from '../../lib/messages';
+import { fetchAdminProjects } from '../../lib/projects';
+import { fetchAdminReviews } from '../../lib/reviews';
 import { logoutAdmin } from '../../lib/auth';
 
 interface AdminLayoutProps {
@@ -25,6 +27,67 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState('');
+  const [sidebarCounts, setSidebarCounts] = useState({
+    totalProjects: 0,
+    pendingReviews: 0,
+    unreadMessages: 0,
+  });
+
+  useEffect(() => {
+    let active = true;
+
+    Promise.all([
+      fetchAdminProjects().catch(() => []),
+      fetchAdminReviews().catch(() => []),
+      fetchAdminMessages().catch(() => []),
+    ])
+      .then(([projects, reviews, messages]) => {
+        if (!active) return;
+
+        setSidebarCounts({
+          totalProjects: projects.length,
+          pendingReviews: reviews.filter((review) => review.status === 'pending').length,
+          unreadMessages: messages.filter((message) => !message.isRead).length,
+        });
+      })
+      .catch(() => {
+        if (active) {
+          setSidebarCounts({ totalProjects: 0, pendingReviews: 0, unreadMessages: 0 });
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const adminNavItems = [
+    { id: 'dashboard', label: 'Dashboard', href: '/admin/dashboard', icon: 'dashboard' },
+    {
+      id: 'projects',
+      label: 'Projects',
+      href: '/admin/projects',
+      icon: 'folder_open',
+      badge: sidebarCounts.totalProjects > 0 ? sidebarCounts.totalProjects : undefined,
+    },
+    {
+      id: 'reviews',
+      label: 'Reviews',
+      href: '/admin/reviews',
+      icon: 'rate_review',
+      badge:
+        sidebarCounts.pendingReviews > 0 ? `${sidebarCounts.pendingReviews} pending` : undefined,
+    },
+    {
+      id: 'messages',
+      label: 'Messages',
+      href: '/admin/messages',
+      icon: 'mail',
+      badge:
+        sidebarCounts.unreadMessages > 0 ? `${sidebarCounts.unreadMessages} new` : undefined,
+    },
+    { id: 'analytics', label: 'Analytics', href: '/admin/analytics', icon: 'analytics' },
+  ];
 
   const handleNav = (href: string) => {
     setMobileSidebarOpen(false);
@@ -144,7 +207,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
 
             {/* Navigation Links */}
             <nav className="space-y-1" role="navigation" aria-label="Admin Sections">
-              {ADMIN_NAV_ITEMS.map((item) => {
+              {adminNavItems.map((item) => {
                 const isActive =
                   currentPath === item.href ||
                   (item.id === 'dashboard' && currentPath === '/admin');
@@ -155,8 +218,8 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
                     type="button"
                     onClick={() => handleNav(item.href)}
                     className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors select-none ${isActive
-                        ? 'bg-stone-800 text-white font-semibold shadow-xs'
-                        : 'text-stone-400 hover:text-stone-200 hover:bg-stone-800/40'
+                      ? 'bg-stone-800 text-white font-semibold shadow-xs'
+                      : 'text-stone-400 hover:text-stone-200 hover:bg-stone-800/40'
                       }`}
                     aria-current={isActive ? 'page' : undefined}
                   >
@@ -172,8 +235,8 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
                     {item.badge && (
                       <span
                         className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${isActive
-                            ? 'bg-stone-700 text-stone-200'
-                            : 'bg-stone-800 text-stone-400'
+                          ? 'bg-stone-700 text-stone-200'
+                          : 'bg-stone-800 text-stone-400'
                           }`}
                       >
                         {item.badge}

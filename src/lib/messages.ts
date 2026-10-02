@@ -10,6 +10,13 @@ interface MessageResponse {
   message: AdminMessageItem;
 }
 
+interface ReplyMessageResponse {
+  message: string;
+  reply: {
+    id: string;
+  };
+}
+
 async function readError(response: Response): Promise<string> {
   try {
     const body = (await response.json()) as { error?: string; details?: string[] };
@@ -71,5 +78,12 @@ export function unarchiveAdminMessage(id: string): Promise<AdminMessageItem> {
 export async function deleteAdminMessage(id: string): Promise<void> {
   await request<{ message: string }>(`/api/admin/messages/${encodeURIComponent(id)}`, {
     method: 'DELETE',
+  });
+}
+
+export async function replyToAdminMessage(id: string, message: string): Promise<ReplyMessageResponse> {
+  return request<ReplyMessageResponse>(`/api/admin/messages/${encodeURIComponent(id)}/reply`, {
+    method: 'POST',
+    body: JSON.stringify({ message }),
   });
 }

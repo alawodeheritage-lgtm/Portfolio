@@ -6,11 +6,16 @@ import {
   listAdminMessages,
   markAdminMessageRead,
   markAdminMessageUnread,
+  replyToAdminMessage,
   submitContactMessage,
   unarchiveAdminMessage,
 } from '../controllers/contact.controller.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
-import { validateContactMessage, validateMessageId } from '../validators/contact.validators.js';
+import {
+  validateContactMessage,
+  validateMessageId,
+  validateReplyMessage,
+} from '../validators/contact.validators.js';
 
 const contactSubmissionRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -27,6 +32,7 @@ contactRouter.post('/', contactSubmissionRateLimit, validateContactMessage, subm
 
 adminMessageRouter.use(requireAuth);
 adminMessageRouter.get('/', listAdminMessages);
+adminMessageRouter.post('/:id/reply', validateMessageId, validateReplyMessage, replyToAdminMessage);
 adminMessageRouter.patch('/:id/read', validateMessageId, markAdminMessageRead);
 adminMessageRouter.patch('/:id/unread', validateMessageId, markAdminMessageUnread);
 adminMessageRouter.patch('/:id/archive', validateMessageId, archiveAdminMessage);

@@ -22,7 +22,7 @@ import { fetchPublicProjects } from './lib/projects';
 import type { Project } from './types/project';
 
 export default function App() {
-  const [currentPath, setCurrentPath] = useState('/');
+  const [currentPath, setCurrentPath] = useState(() => window.location.pathname || '/');
   const [admin, setAdmin] = useState<AuthenticatedAdmin | null>(null);
   const [authState, setAuthState] = useState<'idle' | 'checking' | 'authenticated' | 'unauthenticated'>('idle');
   const [projects, setProjects] = useState<Project[]>([]);
@@ -36,6 +36,19 @@ export default function App() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentPath]);
+
+  useEffect(() => {
+    const handlePopState = () => setCurrentPath(window.location.pathname || '/');
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigateTo = (path: string) => {
+    if (window.location.pathname !== path) {
+      window.history.pushState({}, '', path);
+    }
+    setCurrentPath(path);
+  };
 
   useEffect(() => {
     let isActive = true;
@@ -71,13 +84,13 @@ export default function App() {
         if (!isActive) return;
         setAdmin(currentAdmin);
         setAuthState(currentAdmin ? 'authenticated' : 'unauthenticated');
-        if (!currentAdmin) setCurrentPath('/admin/login');
+        if (!currentAdmin) navigateTo('/admin/login');
       })
       .catch(() => {
         if (!isActive) return;
         setAdmin(null);
         setAuthState('unauthenticated');
-        setCurrentPath('/admin/login');
+        navigateTo('/admin/login');
       });
 
     return () => {
@@ -88,10 +101,10 @@ export default function App() {
   // If visiting a specific project case-study placeholder route
   if (currentPath.startsWith('/projects/') && currentPath !== '/projects') {
     return (
-      <RootLayout currentPath={currentPath} onNavigate={setCurrentPath}>
+      <RootLayout currentPath={currentPath} onNavigate={navigateTo}>
         <ProjectDetailPage
           slug={decodeURIComponent(currentPath.slice('/projects/'.length))}
-          onNavigate={setCurrentPath}
+          onNavigate={navigateTo}
         />
       </RootLayout>
     );
@@ -100,7 +113,7 @@ export default function App() {
   // Dedicated Projects Directory page (/projects)
   if (currentPath === '/projects') {
     return (
-      <RootLayout currentPath={currentPath} onNavigate={setCurrentPath}>
+      <RootLayout currentPath={currentPath} onNavigate={navigateTo}>
         <div className="py-12 sm:py-20 bg-[#FAFAF9] flex-1">
           <Container size="default">
             <div className="space-y-10">
@@ -120,7 +133,7 @@ export default function App() {
                   variant="outline"
                   size="sm"
                   leftIcon="arrow_back"
-                  onClick={() => setCurrentPath('/')}
+                  onClick={() => navigateTo('/')}
                 >
                   Back to Homepage
                 </Button>
@@ -128,7 +141,7 @@ export default function App() {
 
               {/* Projects Grid */}
               <SelectedWorkSection
-                onNavigate={setCurrentPath}
+                onNavigate={navigateTo}
                 projects={projects}
                 isLoading={isLoadingProjects}
                 error={projectsError}
@@ -143,8 +156,8 @@ export default function App() {
   // Dedicated About Page (/about)
   if (currentPath === '/about') {
     return (
-      <RootLayout currentPath={currentPath} onNavigate={setCurrentPath}>
-        <AboutPage onNavigate={setCurrentPath} />
+      <RootLayout currentPath={currentPath} onNavigate={navigateTo}>
+        <AboutPage onNavigate={navigateTo} />
       </RootLayout>
     );
   }
@@ -152,8 +165,8 @@ export default function App() {
   // Dedicated Experience Page (/experience)
   if (currentPath === '/experience') {
     return (
-      <RootLayout currentPath={currentPath} onNavigate={setCurrentPath}>
-        <ExperiencePage onNavigate={setCurrentPath} />
+      <RootLayout currentPath={currentPath} onNavigate={navigateTo}>
+        <ExperiencePage onNavigate={navigateTo} />
       </RootLayout>
     );
   }
@@ -161,8 +174,8 @@ export default function App() {
   // Dedicated Contact Page (/contact)
   if (currentPath === '/contact') {
     return (
-      <RootLayout currentPath={currentPath} onNavigate={setCurrentPath}>
-        <ContactPage onNavigate={setCurrentPath} />
+      <RootLayout currentPath={currentPath} onNavigate={navigateTo}>
+        <ContactPage onNavigate={navigateTo} />
       </RootLayout>
     );
   }
@@ -173,7 +186,7 @@ export default function App() {
   if (currentPath === '/admin/login') {
     return (
       <AdminLogin
-        onNavigate={setCurrentPath}
+        onNavigate={navigateTo}
         onLoginSuccess={(authenticatedAdmin) => {
           setAdmin(authenticatedAdmin);
           setAuthState('authenticated');
@@ -195,12 +208,12 @@ export default function App() {
     return (
       <AdminLayout
         currentPath={currentPath}
-        onNavigate={setCurrentPath}
+        onNavigate={navigateTo}
         pageTitle="System Overview"
         pageDescription="Central operational console for monitoring project publications, contact inquiries, and peer endorsements."
         onLogout={() => setAdmin(null)}
       >
-        <AdminDashboard onNavigate={setCurrentPath} />
+        <AdminDashboard onNavigate={navigateTo} />
       </AdminLayout>
     );
   }
@@ -210,12 +223,12 @@ export default function App() {
     return (
       <AdminLayout
         currentPath={currentPath}
-        onNavigate={setCurrentPath}
+        onNavigate={navigateTo}
         pageTitle="Projects Directory"
         pageDescription="Manage portfolio software systems, repository links, publish status, and featured assignments."
         onLogout={() => setAdmin(null)}
       >
-        <AdminProjects onNavigate={setCurrentPath} />
+        <AdminProjects onNavigate={navigateTo} />
       </AdminLayout>
     );
   }
@@ -225,7 +238,7 @@ export default function App() {
     return (
       <AdminLayout
         currentPath={currentPath}
-        onNavigate={setCurrentPath}
+        onNavigate={navigateTo}
         pageTitle="Reviews & Endorsements"
         pageDescription="Review, moderate, and approve endorsements from academic peers, BCOS ICT mentors, and clients."
         onLogout={() => setAdmin(null)}
@@ -240,7 +253,7 @@ export default function App() {
     return (
       <AdminLayout
         currentPath={currentPath}
-        onNavigate={setCurrentPath}
+        onNavigate={navigateTo}
         pageTitle="Inbound Messages"
         pageDescription="Review inquiries and feedback submitted through the public contact channel."
         onLogout={() => setAdmin(null)}
@@ -255,7 +268,7 @@ export default function App() {
     return (
       <AdminLayout
         currentPath={currentPath}
-        onNavigate={setCurrentPath}
+        onNavigate={navigateTo}
         pageTitle="Traffic & Inquiries"
         pageDescription="Engagement metrics, case-study readership patterns, and referral sources."
         onLogout={() => setAdmin(null)}
@@ -267,7 +280,7 @@ export default function App() {
 
   // Primary Homepage View with Hero and the newly implemented Selected Work section
   return (
-    <RootLayout currentPath={currentPath} onNavigate={setCurrentPath}>
+    <RootLayout currentPath={currentPath} onNavigate={navigateTo}>
       {/* Editorial Hero Area */}
       <section className="py-14 sm:py-20 lg:py-24 border-b border-stone-200/80 bg-stone-50/50">
         <Container size="default">
@@ -303,7 +316,7 @@ export default function App() {
                 size="lg"
                 rightIcon="arrow_forward"
                 disabled={isLoadingProjects || !featuredProject}
-                onClick={() => featuredProject && setCurrentPath(`/projects/${encodeURIComponent(featuredProject.slug)}`)}
+                onClick={() => featuredProject && navigateTo(`/projects/${encodeURIComponent(featuredProject.slug)}`)}
               >
                 Explore Selected Work
               </Button>
@@ -322,7 +335,7 @@ export default function App() {
                 variant="ghost"
                 size="lg"
                 leftIcon="mail"
-                onClick={() => setCurrentPath('/contact')}
+                onClick={() => navigateTo('/contact')}
               >
                 Contact
               </Button>
@@ -333,7 +346,7 @@ export default function App() {
 
       {/* Selected Work Section (ASOCOMMS, FinTrack, SwiftTask, Netflix Clone) */}
       <SelectedWorkSection
-        onNavigate={setCurrentPath}
+        onNavigate={navigateTo}
         projects={projects}
         isLoading={isLoadingProjects}
         error={projectsError}

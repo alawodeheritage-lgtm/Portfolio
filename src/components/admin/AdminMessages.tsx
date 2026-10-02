@@ -8,6 +8,7 @@ import {
   fetchAdminMessages,
   markAdminMessageRead,
   markAdminMessageUnread,
+  replyToAdminMessage,
   unarchiveAdminMessage,
 } from '../../lib/messages';
 
@@ -58,6 +59,10 @@ export const AdminMessages: React.FC = () => {
   const [deleteModalMsgId, setDeleteModalMsgId] = useState<string | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [showTemplatesDropdown, setShowTemplatesDropdown] = useState(false);
+  const [replyOpenMessageId, setReplyOpenMessageId] = useState<string | null>(null);
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+  const [replyErrors, setReplyErrors] = useState<Record<string, string>>({});
+  const [replySendingId, setReplySendingId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -284,6 +289,59 @@ export const AdminMessages: React.FC = () => {
     showToast(`"${template.title}" template copied to clipboard`);
   };
 
+  const handleReplyOpen = (id: string) => {
+    setReplyOpenMessageId(id);
+    setReplyErrors((current) => ({ ...current, [id]: '' }));
+    setReplyDrafts((current) => ({
+      ...current,
+      [id]: current[id] ?? '',
+    }));
+  };
+
+  const handleReplyClose = (id: string) => {
+    setReplyOpenMessageId((current) => (current === id ? null : current));
+    setReplyDrafts((current) => ({ ...current, [id]: '' }));
+    setReplyErrors((current) => {
+      const next = { ...current };
+      delete next[id];
+      return next;
+    });
+  };
+
+  const handleReplySubmit = async (id: string) => {
+    const trimmedReply = (replyDrafts[id] ?? '').trim();
+
+    if (!trimmedReply) {
+      setReplyErrors((current) => ({
+        ...current,
+        [id]: 'Reply message cannot be empty.',
+      }));
+      return;
+    }
+
+    setReplyErrors((current) => ({ ...current, [id]: '' }));
+    setReplySendingId(id);
+
+    try {
+      await replyToAdminMessage(id, trimmedReply);
+      setReplyOpenMessageId((current) => (current === id ? null : current));
+      setReplyDrafts((current) => ({ ...current, [id]: '' }));
+      setReplyErrors((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
+      showToast('Reply sent successfully');
+      setLoadError(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to send reply.';
+      setReplyErrors((current) => ({ ...current, [id]: message }));
+      showToast(message);
+    } finally {
+      setReplySendingId((current) => (current === id ? null : current));
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto" id="admin-messages-root">
       {/* Toast Notification */}
@@ -322,8 +380,8 @@ export const AdminMessages: React.FC = () => {
             type="button"
             onClick={() => setActiveFolder('inbox')}
             className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${activeFolder === 'inbox'
-                ? 'bg-stone-900 text-white'
-                : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
+              ? 'bg-stone-900 text-white'
+              : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
               }`}
           >
             <Icon name="inbox" size="sm" />
@@ -335,8 +393,8 @@ export const AdminMessages: React.FC = () => {
             type="button"
             onClick={() => setActiveFolder('unread')}
             className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${activeFolder === 'unread'
-                ? 'bg-stone-900 text-white'
-                : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
+              ? 'bg-stone-900 text-white'
+              : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
               }`}
           >
             <span className="w-2 h-2 rounded-full bg-amber-500" />
@@ -348,8 +406,8 @@ export const AdminMessages: React.FC = () => {
             type="button"
             onClick={() => setActiveFolder('read')}
             className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${activeFolder === 'read'
-                ? 'bg-stone-900 text-white'
-                : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
+              ? 'bg-stone-900 text-white'
+              : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
               }`}
           >
             <Icon name="mark_email_read" size="sm" />
@@ -361,8 +419,8 @@ export const AdminMessages: React.FC = () => {
             type="button"
             onClick={() => setActiveFolder('archived')}
             className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${activeFolder === 'archived'
-                ? 'bg-stone-900 text-white'
-                : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
+              ? 'bg-stone-900 text-white'
+              : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
               }`}
           >
             <Icon name="archive" size="sm" />
@@ -374,8 +432,8 @@ export const AdminMessages: React.FC = () => {
             type="button"
             onClick={() => setActiveFolder('all')}
             className={`px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap ${activeFolder === 'all'
-                ? 'bg-stone-900 text-white'
-                : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
+              ? 'bg-stone-900 text-white'
+              : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
               }`}
           >
             All ({stats.all})
@@ -508,10 +566,10 @@ export const AdminMessages: React.FC = () => {
                       }
                     }}
                     className={`p-4 cursor-pointer transition-all relative border-l-4 text-left outline-none ${isSelected
-                        ? 'bg-stone-100/90 border-stone-900'
-                        : msg.isRead
-                          ? 'bg-white hover:bg-stone-50 border-transparent'
-                          : 'bg-amber-50/20 hover:bg-amber-50/40 border-amber-500'
+                      ? 'bg-stone-100/90 border-stone-900'
+                      : msg.isRead
+                        ? 'bg-white hover:bg-stone-50 border-transparent'
+                        : 'bg-amber-50/20 hover:bg-amber-50/40 border-amber-500'
                       }`}
                   >
                     {/* Top line: Sender Name + Timestamp */}
@@ -528,8 +586,8 @@ export const AdminMessages: React.FC = () => {
                         )}
                         <span
                           className={`text-sm truncate ${msg.isRead
-                              ? 'font-medium text-stone-800'
-                              : 'font-bold text-stone-950'
+                            ? 'font-medium text-stone-800'
+                            : 'font-bold text-stone-950'
                             }`}
                         >
                           {msg.senderName}
@@ -556,8 +614,8 @@ export const AdminMessages: React.FC = () => {
                     {/* Subject */}
                     <div
                       className={`text-xs pl-4 pt-1 line-clamp-1 ${msg.isRead
-                          ? 'font-normal text-stone-700'
-                          : 'font-semibold text-stone-900'
+                        ? 'font-normal text-stone-700'
+                        : 'font-semibold text-stone-900'
                         }`}
                     >
                       {msg.subject || 'Direct inquiry'}
@@ -596,6 +654,22 @@ export const AdminMessages: React.FC = () => {
                       >
                         <Icon name={msg.isArchived ? 'unarchive' : 'archive'} size="sm" />
                       </button>
+
+                      {!msg.isArchived && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReplyOpen(msg.id);
+                          }}
+                          disabled={isMutating}
+                          className="p-1 rounded text-stone-400 hover:text-stone-800 hover:bg-stone-200/60 transition-colors"
+                          title="Reply to message"
+                          aria-label="Reply to message"
+                        >
+                          <Icon name="reply" size="sm" />
+                        </button>
+                      )}
 
                       {/* Delete Icon */}
                       <button
@@ -675,6 +749,18 @@ export const AdminMessages: React.FC = () => {
 
                   {/* Primary Response / Contact Action */}
                   <div className="flex items-center gap-2 shrink-0">
+                    {!selectedMessage.isArchived && (
+                      <button
+                        id="reply-to-message-btn"
+                        type="button"
+                        onClick={() => handleReplyOpen(selectedMessage.id)}
+                        className="px-3 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 active:bg-stone-950 text-white font-medium text-xs flex items-center gap-1.5 shadow-2xs transition-colors"
+                        title="Reply to this message in-app"
+                      >
+                        <Icon name="reply" size="sm" />
+                        <span>Reply</span>
+                      </button>
+                    )}
                     <a
                       id="respond-via-email-link"
                       href={`mailto:${selectedMessage.senderEmail}?subject=Re: ${encodeURIComponent(
@@ -774,6 +860,57 @@ export const AdminMessages: React.FC = () => {
                   {selectedMessage.message}
                 </div>
               </div>
+
+              {!selectedMessage.isArchived && replyOpenMessageId === selectedMessage.id && (
+                <div className="border-t border-stone-200 pt-5 space-y-3" id="reply-composer">
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-mono font-semibold uppercase tracking-wider text-stone-600">
+                      Send Reply
+                    </span>
+                  </div>
+
+                  <textarea
+                    id="reply-message-textarea"
+                    value={replyDrafts[selectedMessage.id] ?? ''}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setReplyDrafts((current) => ({ ...current, [selectedMessage.id]: value }));
+                      if (replyErrors[selectedMessage.id]) {
+                        setReplyErrors((current) => ({ ...current, [selectedMessage.id]: '' }));
+                      }
+                    }}
+                    rows={6}
+                    placeholder="Type your reply..."
+                    className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-900"
+                    disabled={replySendingId === selectedMessage.id}
+                  />
+
+                  {replyErrors[selectedMessage.id] && (
+                    <p className="text-xs text-rose-600" role="alert">
+                      {replyErrors[selectedMessage.id]}
+                    </p>
+                  )}
+
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleReplyClose(selectedMessage.id)}
+                      disabled={replySendingId === selectedMessage.id}
+                      className="px-3 py-1.5 rounded-lg border border-stone-300 bg-white text-stone-700 text-xs font-medium hover:bg-stone-100 disabled:opacity-60"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleReplySubmit(selectedMessage.id)}
+                      disabled={replySendingId === selectedMessage.id}
+                      className="px-3 py-1.5 rounded-lg bg-stone-900 text-white text-xs font-medium hover:bg-stone-800 disabled:opacity-60"
+                    >
+                      {replySendingId === selectedMessage.id ? 'Sending...' : 'Send Reply'}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Quick Response Drafting Section */}
               <div className="border-t border-stone-200 pt-5 space-y-3" id="quick-response-drawer">

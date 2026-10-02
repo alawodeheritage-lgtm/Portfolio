@@ -34,8 +34,7 @@ export type {
 import type { ReviewStatus } from '../lib/reviews';
 
 /**
- * UI-only compatibility type preserved strictly for the existing mock UI
- * in AdminReviews.tsx and adminMockData.ts until AdminReviews.tsx is connected to the API.
+ * Legacy compatibility type retained only for older admin UI states while the API-backed review model is used.
  */
 export interface LegacyAdminReviewItem {
   id: string;

@@ -1,21 +1,77 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Icon } from '../ui/Icon';
 import { Button } from '../ui/Button';
-import {
-  INITIAL_ADMIN_PROJECTS,
-  INITIAL_ADMIN_MESSAGES,
-  INITIAL_ADMIN_REVIEWS,
-  INITIAL_ADMIN_ANALYTICS,
-} from '../../data/adminMockData';
+import { fetchAdminMessages } from '../../lib/messages';
+import { fetchAdminProjects, type AdminProjectApiProject } from '../../lib/projects';
+import { fetchAdminReviews, type AdminReviewItem } from '../../lib/reviews';
+import type { AdminMessageItem } from '../../types/admin';
 
 interface AdminDashboardProps {
   onNavigate: (path: string) => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
-  const publishedProjects = INITIAL_ADMIN_PROJECTS.filter((p) => p.status === 'published');
-  const unreadMessages = INITIAL_ADMIN_MESSAGES.filter((m) => !m.isRead);
-  const pendingReviews = INITIAL_ADMIN_REVIEWS.filter((r) => r.status === 'pending');
+  const [projects, setProjects] = useState<AdminProjectApiProject[]>([]);
+  const [reviews, setReviews] = useState<AdminReviewItem[]>([]);
+  const [messages, setMessages] = useState<AdminMessageItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    setIsLoading(true);
+    setLoadError(null);
+
+    Promise.all([
+      fetchAdminProjects(),
+      fetchAdminReviews(),
+      fetchAdminMessages(),
+    ])
+      .then(([fetchedProjects, fetchedReviews, fetchedMessages]) => {
+        if (!active) return;
+        setProjects(fetchedProjects);
+        setReviews(fetchedReviews);
+        setMessages(fetchedMessages);
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        setLoadError(
+          error instanceof Error ? error.message : 'Unable to load admin dashboard data.',
+        );
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const publishedProjects = projects.filter((project) => project.isPublished);
+  const unreadMessages = messages.filter((message) => !message.isRead);
+  const pendingReviews = reviews.filter((review) => review.status === 'pending');
+  const totalReviews = reviews.length;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-8 max-w-7xl mx-auto" id="admin-dashboard-root">
+        <div className="p-8 text-center bg-white rounded-xl border border-stone-200 text-stone-500 font-mono text-xs">
+          Loading dashboard data from the database…
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="space-y-8 max-w-7xl mx-auto" id="admin-dashboard-root">
+        <div className="p-8 bg-white rounded-xl border border-rose-200 text-rose-700 font-mono text-xs">
+          {loadError}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto" id="admin-dashboard-root">
@@ -35,12 +91,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
               {publishedProjects.length}
             </span>
             <span className="text-xs font-mono text-stone-500">
-              of {INITIAL_ADMIN_PROJECTS.length} total
+              of {projects.length} total
             </span>
           </div>
           <p className="text-xs text-stone-600">
-            {INITIAL_ADMIN_PROJECTS.length - publishedProjects.length > 0
-              ? `${INITIAL_ADMIN_PROJECTS.length - publishedProjects.length} draft in review`
+            {projects.length - publishedProjects.length > 0
+              ? `${projects.length - publishedProjects.length} draft in review`
               : 'All catalog projects published and active'}
           </p>
         </div>
@@ -56,7 +112,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-bold font-display text-stone-950">
-              {INITIAL_ADMIN_MESSAGES.length}
+              {messages.length}
             </span>
             {unreadMessages.length > 0 && (
               <span className="text-xs font-mono px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-semibold">
@@ -72,29 +128,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
         <div className="p-5 rounded-xl border border-stone-200 bg-white shadow-2xs space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-mono font-medium uppercase tracking-wider text-stone-500">
-              Project Views
-            </span>
-            <div className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center text-stone-700">
-              <Icon name="visibility" size="sm" />
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold font-display text-stone-950">
-              {INITIAL_ADMIN_ANALYTICS.overview.totalProjectViews.toLocaleString()}
-            </span>
-            <span className="text-xs font-mono text-emerald-700 font-medium">
-              ASOCOMMS top
-            </span>
-          </div>
-          <p className="text-xs text-stone-600">
-            Across 4 active showcased architectures
-          </p>
-        </div>
-
-        <div className="p-5 rounded-xl border border-stone-200 bg-white shadow-2xs space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-mono font-medium uppercase tracking-wider text-stone-500">
-              Peer Reviews
+              Total Reviews
             </span>
             <div className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center text-stone-700">
               <Icon name="rate_review" size="sm" />
@@ -102,7 +136,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-bold font-display text-stone-950">
-              {INITIAL_ADMIN_REVIEWS.length}
+              {totalReviews}
+            </span>
+            {pendingReviews.length > 0 && (
+              <span className="text-xs font-mono text-amber-700 font-medium">
+                {pendingReviews.length} pending
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-stone-600">
+            Public project reviews submitted through the portfolio
+          </p>
+        </div>
+
+        <div className="p-5 rounded-xl border border-stone-200 bg-white shadow-2xs space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-mono font-medium uppercase tracking-wider text-stone-500">
+              Pending Reviews
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center text-stone-700">
+              <Icon name="pending" size="sm" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl font-bold font-display text-stone-950">
+              {pendingReviews.length}
             </span>
             {pendingReviews.length > 0 && (
               <span className="text-xs font-mono px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-semibold">
@@ -111,7 +169,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
             )}
           </div>
           <p className="text-xs text-stone-600">
-            BCOS ICT, Agency lead & academic feedback
+            Awaiting moderation before public display
           </p>
         </div>
       </div>
@@ -134,43 +192,49 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
               size="sm"
               onClick={() => onNavigate('/admin/messages')}
             >
-              View All ({INITIAL_ADMIN_MESSAGES.length})
+              View All ({messages.length})
             </Button>
           </div>
 
           <div className="divide-y divide-stone-100">
-            {INITIAL_ADMIN_MESSAGES.slice(0, 3).map((msg) => (
-              <div
-                key={msg.id}
-                onClick={() => onNavigate('/admin/messages')}
-                className="p-5 hover:bg-stone-50 transition-colors cursor-pointer space-y-2"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    {!msg.isRead && (
-                      <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" title="Unread" />
-                    )}
-                    <span className="text-sm font-semibold text-stone-900">
-                      {msg.senderName}
-                    </span>
-                    <span className="text-xs font-mono text-stone-500 hidden sm:inline">
-                      &lt;{msg.senderEmail}&gt;
+            {messages.length === 0 ? (
+              <div className="p-5 text-xs text-stone-500 font-mono">
+                No messages received yet.
+              </div>
+            ) : (
+              messages.slice(0, 3).map((msg) => (
+                <div
+                  key={msg.id}
+                  onClick={() => onNavigate('/admin/messages')}
+                  className="p-5 hover:bg-stone-50 transition-colors cursor-pointer space-y-2"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      {!msg.isRead && (
+                        <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" title="Unread" />
+                      )}
+                      <span className="text-sm font-semibold text-stone-900">
+                        {msg.senderName}
+                      </span>
+                      <span className="text-xs font-mono text-stone-500 hidden sm:inline">
+                        &lt;{msg.senderEmail}&gt;
+                      </span>
+                    </div>
+                    <span className="text-xs font-mono text-stone-500 shrink-0">
+                      {msg.receivedAt}
                     </span>
                   </div>
-                  <span className="text-xs font-mono text-stone-500 shrink-0">
-                    {msg.receivedAt}
-                  </span>
+
+                  <p className="text-xs font-medium text-stone-800">
+                    {msg.subject || 'Direct portfolio message'}
+                  </p>
+
+                  <p className="text-xs text-stone-600 line-clamp-2 leading-relaxed">
+                    {msg.message}
+                  </p>
                 </div>
-
-                <p className="text-xs font-medium text-stone-800">
-                  {msg.subject || 'Direct portfolio message'}
-                </p>
-
-                <p className="text-xs text-stone-600 line-clamp-2 leading-relaxed">
-                  {msg.message}
-                </p>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -239,11 +303,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                 Review Moderation
               </h3>
               <span className="text-xs font-mono px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
-                1 Pending
+                {pendingReviews.length} Pending
               </span>
             </div>
             <p className="text-xs text-stone-600 leading-relaxed">
-              New academic peer submission from LAUTECH awaiting review before appearing on public views.
+              {pendingReviews.length > 0
+                ? 'New public review submissions are awaiting moderation before appearing on public views.'
+                : 'There are no pending review submissions in the current moderation queue.'}
             </p>
             <Button
               variant="outline"
@@ -291,7 +357,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100 font-sans">
-              {INITIAL_ADMIN_PROJECTS.map((project) => (
+              {projects.map((project) => (
                 <tr key={project.id} className="hover:bg-stone-50/80 transition-colors">
                   <td className="py-3.5 px-4">
                     <div className="font-semibold text-stone-900 text-sm">
@@ -306,15 +372,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                   </td>
                   <td className="py-3.5 px-4">
                     <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-mono capitalize ${
-                        project.status === 'published'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : project.status === 'draft'
-                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                          : 'bg-stone-100 text-stone-600 border border-stone-200'
-                      }`}
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-mono capitalize ${project.isPublished
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : 'bg-amber-50 text-amber-700 border border-amber-200'
+                        }`}
                     >
-                      {project.status}
+                      {project.isPublished ? 'published' : 'draft'}
                     </span>
                   </td>
                   <td className="py-3.5 px-4">
@@ -329,17 +392,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                   </td>
                   <td className="py-3.5 px-4">
                     <div className="flex flex-wrap gap-1 max-w-xs">
-                      {project.techStack.slice(0, 3).map((t) => (
+                      {project.technologies.slice(0, 3).map((technology) => (
                         <span
-                          key={t}
+                          key={technology}
                           className="px-1.5 py-0.5 rounded bg-stone-100 text-stone-700 font-mono text-[10px]"
                         >
-                          {t}
+                          {technology}
                         </span>
                       ))}
-                      {project.techStack.length > 3 && (
+                      {project.technologies.length > 3 && (
                         <span className="text-[10px] font-mono text-stone-400 self-center">
-                          +{project.techStack.length - 3}
+                          +{project.technologies.length - 3}
                         </span>
                       )}
                     </div>
