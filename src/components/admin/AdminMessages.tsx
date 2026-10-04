@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Icon } from '../ui/Icon';
 import { Button } from '../ui/Button';
+import { BrandLoader } from '../ui/BrandLoader';
 import { AdminMessageItem } from '../../types/admin';
 import {
   archiveAdminMessage,
@@ -508,9 +509,11 @@ export const AdminMessages: React.FC = () => {
           {/* List Items or Empty State */}
           <div className="divide-y divide-stone-100 max-h-[700px] overflow-y-auto">
             {isLoading ? (
-              <p className="py-14 px-6 text-center text-sm text-stone-500" role="status">
-                Loading messages...
-              </p>
+              <BrandLoader
+                label="Loading messages..."
+                size="sm"
+                className="justify-center py-14 px-6 text-sm text-stone-500"
+              />
             ) : filteredMessages.length === 0 ? (
               <div className="py-14 px-6 text-center space-y-3" id="messages-list-empty">
                 <div className="w-10 h-10 rounded-full bg-stone-100 text-stone-400 mx-auto flex items-center justify-center">

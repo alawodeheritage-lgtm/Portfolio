@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Icon } from '../ui/Icon';
 import { Button } from '../ui/Button';
+import { BrandLoader } from '../ui/BrandLoader';
 import { loginAdmin, AuthenticatedAdmin } from '../../lib/auth';
 
 interface AdminLoginProps {
@@ -100,10 +101,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onNavigate, onLoginSucce
               className="w-full justify-center"
             >
               {isLoading ? (
-                <span className="inline-flex items-center gap-2">
-                  <span className="w-3.5 h-3.5 border-2 border-stone-200 border-t-stone-800 rounded-full animate-spin" />
-                  <span>Authenticating...</span>
-                </span>
+                <BrandLoader label="Authenticating..." size="sm" tone="darkSurface" />
               ) : (
                 'Access Console'
               )}

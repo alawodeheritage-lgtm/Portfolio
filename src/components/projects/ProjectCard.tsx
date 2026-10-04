@@ -91,18 +91,16 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             onClick={() => handleAction(`/projects/${encodeURIComponent(project.slug)}`)}
             className="w-full sm:w-auto"
           >
-            View Project Case Study
+            Read case study
           </Button>
 
           {project.githubUrl && (
             <a
               href={project.githubUrl}
-              onClick={(e) => {
-                e.preventDefault();
-                handleAction(`/projects/${encodeURIComponent(project.slug)}`);
-              }}
+              target="_blank"
+              rel="noopener noreferrer"
               className="p-1.5 text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded-md transition-colors"
-              title="View repository"
+              title="View source"
               aria-label={`View code for ${project.title}`}
             >
               <Icon name="code" size="md" />

@@ -25,17 +25,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           <div className="md:col-span-6 flex flex-col items-start space-y-3">
             <div className="flex items-center gap-2">
               <span className="font-display font-bold text-lg text-stone-900 tracking-tight">
-                Developer Portfolio
-              </span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-stone-200 text-stone-800">
-                Active Project
+                Heritage Tech Labs
               </span>
             </div>
             <p className="text-sm font-medium text-stone-900">
               {BRAND_TAGLINE}
             </p>
             <p className="text-sm text-stone-600 max-w-md leading-relaxed">
-              {CORE_MESSAGE} A Computer Science student and software developer building practical systems, leading with responsibility, and growing through disciplined practice.
+              {CORE_MESSAGE}
             </p>
           </div>
 
@@ -72,7 +69,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <ul className="space-y-2 text-sm text-stone-600">
               <li>
                 <a
-                  href="https://github.com"
+                  href="https://github.com/alawodeheritage-lgtm"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 hover:text-stone-950 transition-colors"
@@ -84,7 +81,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               </li>
               <li>
                 <a
-                  href="https://linkedin.com"
+                  href="www.linkedin.com/in/heritage-alawode-8199513a0"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 hover:text-stone-950 transition-colors"

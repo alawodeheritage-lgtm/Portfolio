@@ -1,5 +1,6 @@
 import React from 'react';
 import { Icon } from './Icon';
+import { BrandLoader } from './BrandLoader';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'link';
 export type ButtonSize = 'sm' | 'md' | 'lg';
@@ -53,7 +54,10 @@ export const Button: React.FC<ButtonProps> = ({
   const content = (
     <>
       {isLoading ? (
-        <span className="inline-block animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+        <BrandLoader
+          size="sm"
+          tone={variant === 'primary' ? 'darkSurface' : 'lightSurface'}
+        />
       ) : leftIcon ? (
         <Icon name={leftIcon} size={size === 'sm' ? 'sm' : 'md'} />
       ) : null}

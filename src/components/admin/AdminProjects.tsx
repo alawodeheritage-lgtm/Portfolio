@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Icon } from '../ui/Icon';
 import { Button } from '../ui/Button';
+import { BrandLoader } from '../ui/BrandLoader';
 import { AdminProjectItem, ProjectPublishStatus } from '../../types/admin';
 import {
   AdminProjectApiProject,
@@ -279,7 +280,7 @@ export const AdminProjects: React.FC<AdminProjectsProps> = ({ onNavigate }) => {
 
       {isLoading && (
         <div className="p-8 text-center bg-white rounded-xl border border-stone-200 text-stone-500 font-mono text-xs">
-          Loading projects from the server...
+          <BrandLoader label="Loading projects from the server..." size="sm" className="justify-center" />
         </div>
       )}
 

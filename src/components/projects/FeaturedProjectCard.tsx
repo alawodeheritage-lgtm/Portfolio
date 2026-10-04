@@ -97,17 +97,18 @@ export const FeaturedProjectCard: React.FC<FeaturedProjectCardProps> = ({
               rightIcon="arrow_forward"
               onClick={() => handleAction(`/projects/${encodeURIComponent(project.slug)}`)}
             >
-              View Engineering Case Study
+              Read case study
             </Button>
             {project.githubUrl && (
-              <Button
-                variant="outline"
-                size="md"
-                leftIcon="code"
-                onClick={() => handleAction(`/projects/${encodeURIComponent(project.slug)}`)}
+              <a
+                href={project.githubUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-900 transition-colors hover:bg-stone-100"
               >
-                Inspect Code Architecture
-              </Button>
+                <Icon name="code" size="md" />
+                View source
+              </a>
             )}
           </div>
         </div>

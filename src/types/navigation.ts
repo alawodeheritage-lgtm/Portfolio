@@ -10,7 +10,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Projects', href: '/projects' },
   { label: 'About', href: '/about' },
   { label: 'Experience', href: '/experience' },
-  { label: 'Contact', href: '/contact' },
 ];
 
 export const BRAND_TAGLINE = 'Software Developer • Leader • Following Christ';

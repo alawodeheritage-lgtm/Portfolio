@@ -4,6 +4,7 @@ import { fetchProjectReviews, PublicProjectReview, submitProjectReview } from '.
 import { Button } from '../ui/Button';
 import { Container } from '../ui/Container';
 import { Icon } from '../ui/Icon';
+import { BrandLoader } from '../ui/BrandLoader';
 
 interface ProjectDetailPageProps {
   slug: string;
@@ -103,6 +104,11 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({ slug, onNa
     }
   };
 
+  const externalCaseStudyUrl =
+    project?.caseStudyUrl && project.caseStudyUrl !== `/projects/${project.slug}`
+      ? project.caseStudyUrl
+      : undefined;
+
   return (
     <article className="py-12 sm:py-20 bg-[#FAFAF9] flex-1 text-stone-900">
       <Container size="narrow">
@@ -117,7 +123,7 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({ slug, onNa
           </button>
 
           {isLoading ? (
-            <p className="mt-8 text-sm text-stone-600" role="status">Loading project...</p>
+            <BrandLoader label="Loading project..." size="sm" className="mt-8 text-sm text-stone-600" />
           ) : error || !project ? (
             <div className="mt-8 p-6 bg-white border border-stone-200 rounded-xl" role="alert">
               <h1 className="text-xl font-bold font-display text-stone-900">Project unavailable</h1>
@@ -140,20 +146,28 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({ slug, onNa
                 {project.tagline && <p className="mt-3 text-lg text-stone-600">{project.tagline}</p>}
                 <p className="mt-6 text-base sm:text-lg text-stone-700 leading-relaxed">{project.description}</p>
 
-                <div className="mt-6 flex flex-wrap gap-3">
-                  {project.liveUrl && (
-                    <a href={project.liveUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-stone-900 text-white text-sm hover:bg-stone-700">
-                      Live project <Icon name="open_in_new" size="sm" />
+                <div className="mt-6 flex flex-col sm:flex-row flex-wrap gap-3">
+                  {project.caseStudyContent ? (
+                    <a href="#project-case-study" className="inline-flex items-center justify-center gap-2 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700">
+                      Read case study <Icon name="arrow_downward" size="sm" />
+                    </a>
+                  ) : externalCaseStudyUrl ? (
+                    <a href={externalCaseStudyUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700">
+                      Read case study <Icon name="open_in_new" size="sm" />
+                    </a>
+                  ) : project.liveUrl ? (
+                    <a href={project.liveUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700">
+                      View live project <Icon name="open_in_new" size="sm" />
+                    </a>
+                  ) : null}
+                  {project.liveUrl && (project.caseStudyContent || externalCaseStudyUrl) && (
+                    <a href={project.liveUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-stone-300 text-stone-800 text-sm hover:bg-stone-100">
+                      View live project <Icon name="open_in_new" size="sm" />
                     </a>
                   )}
                   {project.githubUrl && (
-                    <a href={project.githubUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-stone-300 text-stone-800 text-sm hover:bg-stone-100">
-                      Source code <Icon name="code" size="sm" />
-                    </a>
-                  )}
-                  {project.caseStudyUrl && project.caseStudyUrl !== `/projects/${project.slug}` && (
-                    <a href={project.caseStudyUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-stone-300 text-stone-800 text-sm hover:bg-stone-100">
-                      Case study <Icon name="open_in_new" size="sm" />
+                    <a href={project.githubUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-stone-300 text-stone-800 text-sm hover:bg-stone-100">
+                      View source <Icon name="code" size="sm" />
                     </a>
                   )}
                 </div>
@@ -201,7 +215,7 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({ slug, onNa
               )}
 
               {project.caseStudyContent && (
-                <section className="space-y-3 border-t border-stone-200 pt-8">
+                <section id="project-case-study" className="space-y-3 border-t border-stone-200 pt-8 scroll-mt-24">
                   <h2 className="text-xl font-bold font-display text-stone-900">Case study</h2>
                   <div className="whitespace-pre-wrap text-sm leading-relaxed text-stone-700">{project.caseStudyContent}</div>
                 </section>
@@ -215,7 +229,7 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({ slug, onNa
                   </div>
 
                   {isLoadingReviews ? (
-                    <p className="text-sm text-stone-600" role="status">Loading reviews...</p>
+                    <BrandLoader label="Loading reviews..." size="sm" className="text-sm text-stone-600" />
                   ) : reviewsError ? (
                     <p className="text-sm text-rose-700" role="alert">{reviewsError}</p>
                   ) : reviews.length === 0 ? (
@@ -329,11 +343,6 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({ slug, onNa
                 </div>
               </section>
 
-              <div className="border-t border-stone-200 pt-6">
-                <Button variant="outline" size="sm" leftIcon="arrow_back" onClick={() => onNavigate('/projects')}>
-                  Back to all projects
-                </Button>
-              </div>
             </div>
           )}
         </div>

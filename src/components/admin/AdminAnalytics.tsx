@@ -4,6 +4,7 @@ import { fetchAdminMessages } from '../../lib/messages';
 import { fetchAdminProjects, type AdminProjectApiProject } from '../../lib/projects';
 import { fetchAdminReviews, type AdminReviewItem } from '../../lib/reviews';
 import { Icon } from '../ui/Icon';
+import { BrandLoader } from '../ui/BrandLoader';
 
 interface Metric {
   label: string;
@@ -114,7 +115,7 @@ export const AdminAnalytics: React.FC = () => {
     return (
       <div className="space-y-8 max-w-7xl mx-auto" id="admin-analytics-root">
         <div className="p-8 text-center bg-white rounded-xl border border-stone-200 text-stone-500 font-mono text-xs">
-          Loading analytics data from the database…
+          <BrandLoader label="Loading analytics data from the database…" size="sm" className="justify-center" />
         </div>
       </div>
     );

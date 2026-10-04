@@ -3,6 +3,7 @@ import { RootLayout } from './components/layout/RootLayout';
 import { Container } from './components/ui/Container';
 import { Button } from './components/ui/Button';
 import { Icon } from './components/ui/Icon';
+import { BrandLoader } from './components/ui/BrandLoader';
 import { SelectedWorkSection } from './components/home/SelectedWorkSection';
 import { SkillsSection } from './components/home/SkillsSection';
 import { AboutPage } from './components/about/AboutPage';
@@ -28,7 +29,6 @@ export default function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
   const [projectsError, setProjectsError] = useState<string | null>(null);
-  const featuredProject = projects.find((project) => project.isFeatured) || projects[0];
 
   const isAdminRoute = currentPath === '/admin' || currentPath.startsWith('/admin/');
   const isProtectedAdminRoute = isAdminRoute && currentPath !== '/admin/login';
@@ -114,41 +114,13 @@ export default function App() {
   if (currentPath === '/projects') {
     return (
       <RootLayout currentPath={currentPath} onNavigate={navigateTo}>
-        <div className="py-12 sm:py-20 bg-[#FAFAF9] flex-1">
-          <Container size="default">
-            <div className="space-y-10">
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 pb-8 border-b border-stone-200">
-                <div>
-                  <span className="font-mono text-xs font-semibold tracking-wider text-stone-500 uppercase">
-                    DIRECTORY
-                  </span>
-                  <h1 className="mt-1 text-3xl sm:text-4xl font-bold font-display text-stone-900 tracking-tight">
-                    All Engineering Projects
-                  </h1>
-                  <p className="mt-2 text-stone-600 text-base sm:text-lg max-w-2xl">
-                    Comprehensive overview of practical systems, tools, and technical experiments.
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  leftIcon="arrow_back"
-                  onClick={() => navigateTo('/')}
-                >
-                  Back to Homepage
-                </Button>
-              </div>
-
-              {/* Projects Grid */}
-              <SelectedWorkSection
-                onNavigate={navigateTo}
-                projects={projects}
-                isLoading={isLoadingProjects}
-                error={projectsError}
-              />
-            </div>
-          </Container>
-        </div>
+        <SelectedWorkSection
+          onNavigate={navigateTo}
+          projects={projects}
+          isLoading={isLoadingProjects}
+          error={projectsError}
+          directoryView
+        />
       </RootLayout>
     );
   }
@@ -198,7 +170,11 @@ export default function App() {
   if (isProtectedAdminRoute && authState !== 'authenticated') {
     return (
       <div className="min-h-screen bg-stone-100 flex items-center justify-center text-sm text-stone-600">
-        {authState === 'checking' ? 'Checking admin session...' : 'Redirecting to admin login...'}
+        {authState === 'checking' ? (
+          <BrandLoader label="Checking admin session..." size="sm" />
+        ) : (
+          'Redirecting to admin login...'
+        )}
       </div>
     );
   }
@@ -310,34 +286,24 @@ export default function App() {
             </p>
 
             {/* Hero CTAs */}
-            <div className="flex flex-wrap items-center gap-3 pt-2">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 pt-2">
               <Button
                 variant="primary"
                 size="lg"
                 rightIcon="arrow_forward"
-                disabled={isLoadingProjects || !featuredProject}
-                onClick={() => featuredProject && navigateTo(`/projects/${encodeURIComponent(featuredProject.slug)}`)}
+                onClick={() => navigateTo('/projects')}
+                className="w-full sm:w-auto"
               >
-                Explore Selected Work
+                View projects
               </Button>
               <Button
                 variant="outline"
                 size="lg"
-                leftIcon="terminal"
-                onClick={() => {
-                  const el = document.getElementById('skills-and-learning');
-                  if (el) el.scrollIntoView({ behavior: 'smooth' });
-                }}
-              >
-                Toolkit & Learning
-              </Button>
-              <Button
-                variant="ghost"
-                size="lg"
                 leftIcon="mail"
                 onClick={() => navigateTo('/contact')}
+                className="w-full sm:w-auto"
               >
-                Contact
+                Get in touch
               </Button>
             </div>
           </div>

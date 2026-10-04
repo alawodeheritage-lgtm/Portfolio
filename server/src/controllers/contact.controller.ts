@@ -1,11 +1,10 @@
 import type { RequestHandler } from 'express';
-import { env } from '../config/env.js';
 import { ContactMessageModel, type ContactMessageDocument } from '../models/ContactMessage.js';
 import { sendTransactionalEmail } from '../services/brevo.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError } from '../utils/httpError.js';
 
-const portfolioName = 'Developer Portfolio & Platform';
+const portfolioName = 'Heritage TechL abs';
 
 function toAdminMessage(message: ContactMessageDocument) {
   const id = message._id.toString();
@@ -149,8 +148,7 @@ export const replyToAdminMessage: RequestHandler = asyncHandler(async (request, 
       textContent: plainTextReply,
       htmlContent: htmlReply,
       replyTo: {
-        email: env.emailFromAddress,
-        name: env.emailFromName,
+        email: 'alawodeheritage2@gmail.com',
       },
     });
   } catch (error: unknown) {

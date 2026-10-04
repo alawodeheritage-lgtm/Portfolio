@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Container } from '../ui/Container';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
+import { BrandLoader } from '../ui/BrandLoader';
 import { submitContactMessage } from '../../lib/contact';
 
 interface ContactFormData {
@@ -137,7 +138,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onNavigate }) => {
                     className="inline-flex items-center gap-2 text-stone-950 font-medium text-base hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-500 rounded-sm"
                   >
                     <Icon name="mail" size="sm" className="text-stone-600" />
-                    <span>alawodeheritage@gmail.com</span>
+                    <span>alawodeheritage2@gmail.com</span>
                   </a>
                 </div>
               </div>
@@ -249,8 +250,8 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onNavigate }) => {
                         aria-describedby={errors.name ? 'contact-name-error' : undefined}
                         placeholder="e.g., Alex Morgan"
                         className={`w-full px-3.5 py-2.5 rounded-lg border bg-stone-50/50 text-stone-900 placeholder:text-stone-400 text-sm transition-colors focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-stone-900 ${errors.name
-                            ? 'border-rose-400 bg-rose-50/20'
-                            : 'border-stone-300 hover:border-stone-400'
+                          ? 'border-rose-400 bg-rose-50/20'
+                          : 'border-stone-300 hover:border-stone-400'
                           } disabled:opacity-60 disabled:cursor-not-allowed`}
                       />
                       {errors.name && (
@@ -288,8 +289,8 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onNavigate }) => {
                         aria-describedby={errors.email ? 'contact-email-error' : undefined}
                         placeholder="you@example.com"
                         className={`w-full px-3.5 py-2.5 rounded-lg border bg-stone-50/50 text-stone-900 placeholder:text-stone-400 text-sm transition-colors focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-stone-900 ${errors.email
-                            ? 'border-rose-400 bg-rose-50/20'
-                            : 'border-stone-300 hover:border-stone-400'
+                          ? 'border-rose-400 bg-rose-50/20'
+                          : 'border-stone-300 hover:border-stone-400'
                           } disabled:opacity-60 disabled:cursor-not-allowed`}
                       />
                       {errors.email && (
@@ -326,8 +327,8 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onNavigate }) => {
                         aria-describedby={errors.message ? 'contact-message-error' : undefined}
                         placeholder="Write your note, question, or project inquiry..."
                         className={`w-full px-3.5 py-2.5 rounded-lg border bg-stone-50/50 text-stone-900 placeholder:text-stone-400 text-sm transition-colors resize-y focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-stone-900 ${errors.message
-                            ? 'border-rose-400 bg-rose-50/20'
-                            : 'border-stone-300 hover:border-stone-400'
+                          ? 'border-rose-400 bg-rose-50/20'
+                          : 'border-stone-300 hover:border-stone-400'
                           } disabled:opacity-60 disabled:cursor-not-allowed`}
                       />
                       {errors.message && (
@@ -352,10 +353,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onNavigate }) => {
                         className="w-full sm:w-auto"
                       >
                         {status === 'submitting' ? (
-                          <span className="inline-flex items-center gap-2">
-                            <span className="w-3.5 h-3.5 border-2 border-stone-200 border-t-stone-800 rounded-full animate-spin" />
-                            <span>Sending message...</span>
-                          </span>
+                          <BrandLoader label="Sending message..." size="sm" tone="darkSurface" />
                         ) : (
                           'Send Message'
                         )}

@@ -60,7 +60,7 @@ export class BrevoEmailService {
     });
 
     const info = await transporter.sendMail({
-      from: `${this.defaultFrom.name} <${this.defaultFrom.email}>`,
+      from: 'HeritageTechLabs <alawodeheritage2@gmail.com>',
       to: to.map((recipient) => (recipient.name ? `${recipient.name} <${recipient.email}>` : recipient.email)),
       replyTo: replyTo ? `${replyTo.name ?? ''} <${replyTo.email}>`.trim() : undefined,
       subject,

@@ -34,24 +34,6 @@ export const ExperiencePage: React.FC<ExperiencePageProps> = ({ onNavigate }) =>
               An authentic record of the environments I have contributed to, the technical problems I worked around, and the foundational disciplines each experience instilled—without exaggerated titles or invented numbers.
             </p>
 
-            <div className="pt-2 flex flex-wrap items-center gap-3">
-              <Button
-                variant="primary"
-                size="md"
-                rightIcon="arrow_forward"
-                onClick={() => onNavigate('/projects')}
-              >
-                View Applied Projects
-              </Button>
-              <Button
-                variant="outline"
-                size="md"
-                leftIcon="mail"
-                onClick={() => onNavigate('/contact')}
-              >
-                Reach Out
-              </Button>
-            </div>
           </div>
         </Container>
       </section>

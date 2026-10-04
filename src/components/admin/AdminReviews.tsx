@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Icon } from '../ui/Icon';
+import { BrandLoader } from '../ui/BrandLoader';
 import {
   AdminReviewItem,
   approveAdminReview,
@@ -134,8 +135,7 @@ export const AdminReviews: React.FC = () => {
     return (
       <div className="space-y-6 max-w-7xl mx-auto" id="admin-reviews-root">
         <div className="p-10 text-center bg-white rounded-xl border border-stone-200 text-stone-500 font-mono text-xs">
-          <span className="inline-block animate-spin h-4 w-4 border-2 border-stone-400 border-t-transparent rounded-full mr-2 align-middle" />
-          Loading reviews from database…
+          <BrandLoader label="Loading reviews from database…" size="sm" className="justify-center" />
         </div>
       </div>
     );
@@ -196,11 +196,10 @@ export const AdminReviews: React.FC = () => {
               key={key}
               type="button"
               onClick={() => setFilter(key)}
-              className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
-                filter === key
+              className={`px-3 py-1.5 rounded-md font-medium transition-colors ${filter === key
                   ? 'bg-stone-900 text-white'
                   : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-              }`}
+                }`}
             >
               {label}
             </button>
@@ -227,9 +226,8 @@ export const AdminReviews: React.FC = () => {
             return (
               <div
                 key={r.id}
-                className={`bg-white p-6 rounded-xl border border-stone-200 shadow-2xs space-y-4 transition-opacity ${
-                  isMutating ? 'opacity-60 pointer-events-none' : ''
-                }`}
+                className={`bg-white p-6 rounded-xl border border-stone-200 shadow-2xs space-y-4 transition-opacity ${isMutating ? 'opacity-60 pointer-events-none' : ''
+                  }`}
               >
                 {/* Card Header */}
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-3 border-b border-stone-100">
@@ -268,13 +266,12 @@ export const AdminReviews: React.FC = () => {
                     </span>
                     {/* Status badge */}
                     <span
-                      className={`font-mono text-xs px-2.5 py-0.5 rounded-full capitalize ${
-                        r.status === 'approved'
+                      className={`font-mono text-xs px-2.5 py-0.5 rounded-full capitalize ${r.status === 'approved'
                           ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                           : r.status === 'rejected'
-                          ? 'bg-rose-50 text-rose-800 border border-rose-200'
-                          : 'bg-amber-50 text-amber-800 border border-amber-200'
-                      }`}
+                            ? 'bg-rose-50 text-rose-800 border border-rose-200'
+                            : 'bg-amber-50 text-amber-800 border border-amber-200'
+                        }`}
                     >
                       {r.status}
                     </span>

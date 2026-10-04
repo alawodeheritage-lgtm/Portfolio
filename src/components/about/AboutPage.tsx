@@ -33,24 +33,6 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onNavigate }) => {
               I am a Computer Science student at Ladoke Akintola University of Technology (LAUTECH) and a software developer who builds practical systems while continuously learning in public.
             </p>
 
-            <div className="pt-2 flex flex-wrap items-center gap-3">
-              <Button
-                variant="primary"
-                size="md"
-                rightIcon="arrow_forward"
-                onClick={() => onNavigate('/projects')}
-              >
-                View Selected Work
-              </Button>
-              <Button
-                variant="outline"
-                size="md"
-                leftIcon="mail"
-                onClick={() => onNavigate('/contact')}
-              >
-                Get in Touch
-              </Button>
-            </div>
           </div>
         </Container>
       </section>

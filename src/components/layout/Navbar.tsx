@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Container } from '../ui/Container';
 import { Icon } from '../ui/Icon';
 import { Button } from '../ui/Button';
+import { BrandMark } from '../ui/BrandMark';
 import { NAV_ITEMS, BRAND_TAGLINE } from '../../types/navigation';
 
 export interface NavbarProps {
@@ -34,11 +35,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header
-      className={`sticky top-0 z-40 transition-all duration-200 ${
-        scrolled
+      className={`sticky top-0 z-40 transition-all duration-200 ${scrolled
           ? 'bg-stone-50/95 backdrop-blur-md border-b border-stone-200/80 shadow-xs'
           : 'bg-stone-50 border-b border-stone-200/60'
-      }`}
+        }`}
       role="banner"
     >
       <Container size="default">
@@ -48,19 +48,22 @@ export const Navbar: React.FC<NavbarProps> = ({
             <a
               href="/"
               onClick={(e) => handleLinkClick(e, '/')}
-              className="group flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-500 rounded-sm"
+              className="group flex items-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-500 rounded-sm"
               aria-label="Home"
             >
-              <div className="flex items-center gap-2">
-                <span className="font-display font-bold text-lg text-stone-900 tracking-tight group-hover:text-stone-700 transition-colors">
-                  Heritage Tech Labs
+              <BrandMark size="sm" />
+              <span className="flex flex-col">
+                <span className="flex items-center gap-2">
+                  <span className="font-display font-bold text-lg text-stone-900 tracking-tight group-hover:text-stone-700 transition-colors">
+                    Heritage Tech Labs
+                  </span>
+                  <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-stone-200/70 text-stone-700">
+                    CS & Dev
+                  </span>
                 </span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-stone-200/70 text-stone-700">
-                  CS & Dev
+                <span className="text-[11px] text-stone-500 font-medium tracking-normal hidden sm:block">
+                  {BRAND_TAGLINE}
                 </span>
-              </div>
-              <span className="text-[11px] text-stone-500 font-medium tracking-normal hidden sm:block">
-                {BRAND_TAGLINE}
               </span>
             </a>
           </div>
@@ -72,17 +75,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             aria-label="Main navigation"
           >
             {NAV_ITEMS.map((item) => {
-              const isActive = currentPath === item.href;
+              const isActive =
+                currentPath === item.href ||
+                (item.href === '/projects' && currentPath.startsWith('/projects/'));
               return (
                 <a
                   key={item.href}
                   href={item.href}
                   onClick={(e) => handleLinkClick(e, item.href)}
-                  className={`px-3.5 py-1.5 rounded-md text-sm font-medium transition-colors select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-500 ${
-                    isActive
+                  className={`px-3.5 py-1.5 rounded-md text-sm font-medium transition-colors select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-500 ${isActive
                       ? 'text-stone-950 bg-stone-200/60 font-semibold'
                       : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-                  }`}
+                    }`}
                   aria-current={isActive ? 'page' : undefined}
                 >
                   {item.label}
@@ -120,21 +124,22 @@ export const Navbar: React.FC<NavbarProps> = ({
         {mobileMenuOpen && (
           <div className="md:hidden py-3 border-t border-stone-200 animate-in fade-in duration-150">
             <div className="flex flex-col gap-1 pb-3">
-              <div className="px-3 py-1.5 text-xs font-mono text-stone-500 uppercase tracking-wider">
+              <div className="px-3 py-1.5 text-xs font-mono text-stone-500 uppercase tracking-wider sm:hidden">
                 {BRAND_TAGLINE}
               </div>
               {NAV_ITEMS.map((item) => {
-                const isActive = currentPath === item.href;
+                const isActive =
+                  currentPath === item.href ||
+                  (item.href === '/projects' && currentPath.startsWith('/projects/'));
                 return (
                   <a
                     key={item.href}
                     href={item.href}
                     onClick={(e) => handleLinkClick(e, item.href)}
-                    className={`px-3 py-2 rounded-md text-base font-medium transition-colors ${
-                      isActive
+                    className={`px-3 py-2 rounded-md text-base font-medium transition-colors ${isActive
                         ? 'text-stone-950 bg-stone-200/80 font-semibold'
                         : 'text-stone-600 hover:text-stone-950 hover:bg-stone-100'
-                    }`}
+                      }`}
                     aria-current={isActive ? 'page' : undefined}
                   >
                     {item.label}

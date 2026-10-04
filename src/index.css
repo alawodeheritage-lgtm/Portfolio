@@ -32,3 +32,32 @@
   font-feature-settings: 'liga';
   -webkit-font-smoothing: antialiased;
 }
+
+@keyframes brand-loader-trace {
+  0% {
+    stroke-dashoffset: 14;
+    opacity: 0.55;
+  }
+
+  50% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+
+  100% {
+    stroke-dashoffset: -14;
+    opacity: 0.55;
+  }
+}
+
+.brand-loader-trace {
+  animation: brand-loader-trace 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-loader-trace {
+    animation: none;
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
