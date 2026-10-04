@@ -127,7 +127,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           <div className="flex items-center gap-2.5">
             <span className="w-2.5 h-2.5 rounded-xs bg-amber-500" />
             <span className="font-display font-bold text-sm tracking-tight text-white">
-              Portfolio Console
+              Heritage Tech labs
             </span>
             <span className="hidden sm:inline-block font-mono text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-stone-800 text-stone-400 border border-stone-700">
               Admin
@@ -200,7 +200,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
             <div className="px-3 py-2 rounded-lg bg-stone-800/60 border border-stone-800 text-[11px] font-mono text-stone-400 space-y-1">
               <div className="text-stone-300 font-semibold flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span>Private Console</span>
+                <span>Heritage Tech Labs</span>
               </div>
               <div>Single-tenant management UI</div>
             </div>

@@ -81,7 +81,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               </li>
               <li>
                 <a
-                  href="www.linkedin.com/in/heritage-alawode-8199513a0"
+                  href="https://www.linkedin.com/in/heritage-alawode-8199513a0/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 hover:text-stone-950 transition-colors"
